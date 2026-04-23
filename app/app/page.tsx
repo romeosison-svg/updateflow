@@ -32,7 +32,7 @@ const sampleTranscripts = [
 ] as const;
 
 const outputCards: Array<{ key: OutputCardKey; title: string }> = [
-  { key: "shortStatus", title: "Short Status" },
+  { key: "shortStatus", title: "Status Update" },
   { key: "actionList", title: "Action List" },
   { key: "externalUpdate", title: "External Update" },
   { key: "internalUpdate", title: "Internal Update" }
@@ -237,10 +237,22 @@ export default function ToolPage() {
             return (
               <section key={card.key} className="card output-card">
                 <div className="output-header">
-                  <div>
-                    <h2>{card.title}</h2>
-                    <p>Copy the draft and refine as needed.</p>
-                  </div>
+                <div>
+                  <h2>{card.title}</h2>
+                  {card.key === "shortStatus" && (
+                    <p
+                      style={{
+                        color: "var(--muted)",
+                        fontSize: "0.92rem",
+                        lineHeight: 1.5,
+                        margin: "0.35rem 0 0"
+                      }}
+                    >
+                      A concise update you can send or use as a lightweight meeting summary
+                    </p>
+                  )}
+                  <p>Copy the draft and refine as needed.</p>
+                </div>
                   <button
                     type="button"
                     className="secondary-button"
