@@ -1,0 +1,1 @@
+API integration is slightly delayed due to dependency on vendor. QA team is stretched. We’re planning to start UAT next week assuming environment is ready.
