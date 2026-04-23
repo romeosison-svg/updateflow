@@ -304,10 +304,14 @@ Instructions:
 - Keep it sharp and concise (max 3 sentences)
 - Ensure the update reads as a smooth, cohesive 2-3 sentence paragraph
 - Limit output to 2-3 short sentences maximum
+- If the source input is already concise and structured, do not expand it
+- The output should usually be equal length or shorter than the source unless extra clarity is genuinely needed
 - Avoid long or complex sentence structures
 - Keep each sentence focused and concise
 - Use clear, confident, professional language
 - Use confident, direct, delivery-focused language that feels ready to paste into Slack, Teams, or email
+- Avoid adding connective or explanatory wording that makes the update longer without improving clarity
+- Prefer tighter phrasing over more formal phrasing
 - Focus on delivery status and impact rather than internal or operational phrasing
 - Avoid internal wording such as "team is at capacity" or "resource constraints"
 - Do not include internal or emotional phrasing such as "team is under pressure"
@@ -326,6 +330,8 @@ Instructions:
 - Do not explain how issues are being managed
 - Keep focus on current status, key risk or impact, and immediate next focus
 - Keep statements concise but meaningful
+- Do not restate simple tasks or updates in a more verbose form
+- Prefer direct wording such as "RAID log update is due by end of day", "resource availability is still to be confirmed", or "focus is on reviewing open defects"
 - Avoid generic phrasing such as "Focus for the coming week is on"
 - Prefer natural phrasing such as "Focus this week is on" or integrate focus more smoothly into the update
 - Avoid generic ending phrases such as "maintain delivery schedule"
