@@ -239,18 +239,6 @@ export default function ToolPage() {
                 <div className="output-header">
                 <div>
                   <h2>{card.title}</h2>
-                  {card.key === "shortStatus" && (
-                    <p
-                      style={{
-                        color: "var(--muted)",
-                        fontSize: "0.92rem",
-                        lineHeight: 1.5,
-                        margin: "0.35rem 0 0"
-                      }}
-                    >
-                      A concise update you can send or use as a lightweight meeting summary
-                    </p>
-                  )}
                   <p>Copy the draft and refine as needed.</p>
                 </div>
                   <button
