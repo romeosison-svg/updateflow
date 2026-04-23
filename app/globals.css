@@ -124,6 +124,14 @@ select {
   line-height: 1.65;
 }
 
+.compatibility-line {
+  margin-top: 0.9rem;
+  color: var(--muted);
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
 .card {
   padding: 1.5rem;
   border: 1px solid var(--border);

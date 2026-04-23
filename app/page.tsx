@@ -15,11 +15,10 @@ export default function LandingPage() {
         <Link className="eyebrow eyebrow-link" href="/">
           Updateflow
         </Link>
-        <h1>Turn messy meeting notes into updates you can actually send</h1>
+        <h1>Turn messy notes or AI summaries into updates you can actually send</h1>
         <p>
-          Updateflow gives senior PMs a strong first draft for status updates, actions,
-          and RAID logs, so you spend less time rewriting notes and more time shaping the
-          message.
+          Updateflow gives PMs a clean, structured status update and action list in
+          seconds, so you spend less time rewriting and more time sending.
         </p>
 
         <div className="landing-actions">
@@ -30,6 +29,10 @@ export default function LandingPage() {
             See example outputs
           </a>
         </div>
+
+        <p className="compatibility-line">
+          Works with your notes or summaries from tools like Copilot, ChatGPT, or Zoom.
+        </p>
 
         <p className="credibility-line">
           Built for PMs who already know what good looks like, but don&apos;t want to waste
