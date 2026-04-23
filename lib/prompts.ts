@@ -245,9 +245,15 @@ Instructions:
 - Only include actions that are explicitly stated or clearly follow-up tasks
 - Only include items that are explicitly stated or clearly implied as a direct consequence
 - Do not infer or invent content beyond what is explicitly stated or strongly implied in the transcript
+- Treat actions as explicitly stated follow-ups, clearly agreed next steps, or new tasks arising from the meeting
+- Do not treat updates on work already in progress, known issues being worked on, ongoing tracked tasks, or status descriptions as actions
+- If an item is simply describing current work or status, do not convert it into an action
+- Only include actions that would realistically be written down as new follow-ups in meeting minutes
 - Do not generate speculative, generic, or assumed actions
 - Do not expand into good-practice tasks that are not grounded in the transcript
-- If few or no actions are present, return a short list
+- Prefer fewer, high-confidence actions over many speculative ones
+- If only a small number of real actions exist, return only those
+- It is acceptable to return a very short action list
 - Use plain text headings only, with no markdown or asterisks
 - Do not use colons in section headings
 - Insert exactly one blank line between each heading and its content
@@ -269,6 +275,7 @@ Instructions:
 - Prefer actions that can be completed and verified
 - Do not use vague or filler terms such as "if required", "where possible", "as needed", "ensure", or "support"
 - Do not use weak or passive action verbs such as "follow up", "check", or "review and adjust if possible"
+- Avoid generic PM filler such as "follow up on", "review status", or "ensure progress"
 - Prefer clear, outcome-driven verbs such as "confirm", "finalise", "prioritise", "validate", or "secure"
 - Do not use non-committal phrases such as "if possible", "if required", or "where possible"
 - Replace generic wording with specific, concrete actions
@@ -279,6 +286,8 @@ Instructions:
 - Do not default all actions to High priority
 - Do not infer organisational structure or responsibilities
 - Prioritise accuracy and credibility over completeness
+- Only include actions that add real value beyond what is already being tracked
+- If a senior PM would not create a new task for it, do not include it
 - Avoid generic or vague tasks`
 };
 
