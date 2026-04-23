@@ -134,6 +134,9 @@ Instructions:
 - Do not mix paragraph and bullet formatting within the same output
 - Keep heading formatting clean and copy-paste ready for email, Slack, or Teams
 - Avoid overly formal or consulting-style phrasing
+- Prioritise accuracy and restraint over completeness
+- Only include items that are explicitly stated or clearly implied as a direct consequence
+- Do not infer or invent content beyond what is explicitly stated or strongly implied in the transcript
 - Ensure outputs feel concise, credible, decision-oriented, and like internal communication rather than a polished external report
 - In Progress / Achievements, include only tangible, meaningful positive forward movement, completed work, or work that is on track
 - Ensure Progress / Achievements includes at least one or two meaningful indicators of actual delivery progress where the transcript supports it
@@ -166,6 +169,8 @@ Instructions:
 - In Decisions Required, use decisive, action-oriented language such as "agree whether to adjust timelines" or "confirm approach to"
 - Ensure Decisions Required feels like a real escalation point
 - Prefer active, outcome-oriented language over passive phrasing
+- Reduce verbosity and do not expand points into longer or more complex sentences than necessary
+- Do not add new risks, issues, dependencies, or actions unless they are clearly grounded in the transcript
 - Avoid generic or filler wording
 - Ensure outputs feel like something a senior PM would send with minimal or no editing
 - Maintain useful detail after sanitisation`
@@ -196,6 +201,9 @@ Instructions:
 - Keep heading formatting clean and copy-paste ready for email, Slack, or Teams
 - Keep language simple, direct, and professional
 - Use polished, professional language
+- Prioritise accuracy and restraint over completeness
+- Only include items that are explicitly stated or clearly implied as a direct consequence
+- Do not infer or invent content beyond what is explicitly stated or strongly implied in the transcript
 - Frame risks carefully but transparently
 - Present risks in a controlled, measured way
 - Clearly link risks to specific potential impacts such as UAT start or delivery milestones
@@ -211,6 +219,8 @@ Instructions:
 - Replace generic reassurance with specific, concrete statements about progress or next steps
 - Avoid overly technical or internal detail
 - Keep it concise and credible
+- Reduce verbosity and do not expand points into longer or more complex sentences than necessary
+- Do not add new risks, issues, dependencies, or actions unless they are clearly grounded in the transcript
 - Avoid over-explaining or adding unnecessary commentary
 - Avoid sounding reactive, defensive, or overly detailed
 - Maintain useful detail after sanitisation`
@@ -231,7 +241,13 @@ Format each action as:
    Priority: ...
 
 Instructions:
-- Only include real, clearly implied actions
+- Prioritise accuracy and restraint over completeness
+- Only include actions that are explicitly stated or clearly follow-up tasks
+- Only include items that are explicitly stated or clearly implied as a direct consequence
+- Do not infer or invent content beyond what is explicitly stated or strongly implied in the transcript
+- Do not generate speculative, generic, or assumed actions
+- Do not expand into good-practice tasks that are not grounded in the transcript
+- If few or no actions are present, return a short list
 - Use plain text headings only, with no markdown or asterisks
 - Do not use colons in section headings
 - Insert exactly one blank line between each heading and its content
