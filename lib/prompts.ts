@@ -310,6 +310,8 @@ Instructions:
 - Keep each sentence focused and concise
 - Ensure all statements are directly supported by the input
 - Do not introduce impact, risk, or consequences unless they are explicitly stated or clearly unavoidable
+- Preserve the original level of certainty and obligation from the input
+- Do not upgrade neutral or soft phrasing into stronger wording
 - Use clear, confident, professional language
 - Use confident, direct, delivery-focused language that feels ready to paste into Slack, Teams, or email
 - Avoid adding connective or explanatory wording that makes the update longer without improving clarity
@@ -333,6 +335,9 @@ Instructions:
 - You may describe dependencies or outstanding items as "pending", "outstanding", or "to be confirmed"
 - You may connect ideas only when the relationship is explicitly stated
 - Prefer grounded phrasing such as "remains outstanding and is a dependency for integration" instead of inferred impact language
+- Do not replace phrases such as "to provide" with "is required", "to confirm" with "must confirm", "expected" with "required", or "pending" with "needed"
+- Prefer neutral, faithful wording such as "is due", "is expected", "remains outstanding", or "is to be provided"
+- Keep wording aligned with the original intent of the source
 - Do not explain how issues are being managed
 - Keep focus on current status, key risk or impact, and immediate next focus
 - Keep statements concise but meaningful
