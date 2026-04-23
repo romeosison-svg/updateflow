@@ -308,6 +308,8 @@ Instructions:
 - The output should usually be equal length or shorter than the source unless extra clarity is genuinely needed
 - Avoid long or complex sentence structures
 - Keep each sentence focused and concise
+- Ensure all statements are directly supported by the input
+- Do not introduce impact, risk, or consequences unless they are explicitly stated or clearly unavoidable
 - Use clear, confident, professional language
 - Use confident, direct, delivery-focused language that feels ready to paste into Slack, Teams, or email
 - Avoid adding connective or explanatory wording that makes the update longer without improving clarity
@@ -327,6 +329,10 @@ Instructions:
 - Link issues clearly to delivery impact, such as risk to UAT start or delivery dates
 - Clearly link cause to impact and avoid soft or non-committal wording
 - Ensure every problem statement clearly states what it affects
+- Do not infer timeline impact, delivery risk, or causal relationships unless they are directly supported by the input
+- You may describe dependencies or outstanding items as "pending", "outstanding", or "to be confirmed"
+- You may connect ideas only when the relationship is explicitly stated
+- Prefer grounded phrasing such as "remains outstanding and is a dependency for integration" instead of inferred impact language
 - Do not explain how issues are being managed
 - Keep focus on current status, key risk or impact, and immediate next focus
 - Keep statements concise but meaningful
