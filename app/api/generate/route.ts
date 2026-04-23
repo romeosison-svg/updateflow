@@ -5,7 +5,12 @@ import type { GeneratedOutputs, RaidOutput } from "@/lib/output";
 const MAX_TRANSCRIPT_LENGTH = 25000;
 
 export async function POST(request: Request) {
-  let body: { includeRaid?: boolean; transcript?: string };
+  let body: {
+    includeExternal?: boolean;
+    includeInternal?: boolean;
+    includeRaid?: boolean;
+    transcript?: string;
+  };
 
   try {
     const contentType = request.headers.get("content-type") ?? "";
@@ -20,7 +25,12 @@ export async function POST(request: Request) {
     }
 
     try {
-      body = (await request.json()) as { includeRaid?: boolean; transcript?: string };
+      body = (await request.json()) as {
+        includeExternal?: boolean;
+        includeInternal?: boolean;
+        includeRaid?: boolean;
+        transcript?: string;
+      };
     } catch {
       return NextResponse.json(
         { error: "Request body must be valid JSON." },
@@ -31,6 +41,8 @@ export async function POST(request: Request) {
     }
 
     const transcript = body.transcript?.trim() ?? "";
+    const includeExternal = body.includeExternal === true;
+    const includeInternal = body.includeInternal === true;
     const includeRaid = body.includeRaid === true;
 
     if (!transcript) {
@@ -66,17 +78,39 @@ export async function POST(request: Request) {
       });
     }
 
-    const [internalUpdate, externalUpdate, shortStatus, actionList] = await Promise.all([
-      generateText({
+    if (includeInternal) {
+      const internalUpdate = await generateText({
         transcript,
         outputType: "stakeholder-update",
         audience: "internal"
-      }),
-      generateText({
+      });
+
+      const outputs: GeneratedOutputs = {
+        internalUpdate
+      };
+
+      return NextResponse.json({
+        outputs
+      });
+    }
+
+    if (includeExternal) {
+      const externalUpdate = await generateText({
         transcript,
         outputType: "stakeholder-update",
         audience: "external"
-      }),
+      });
+
+      const outputs: GeneratedOutputs = {
+        externalUpdate
+      };
+
+      return NextResponse.json({
+        outputs
+      });
+    }
+
+    const [shortStatus, actionList] = await Promise.all([
       generateText({
         transcript,
         outputType: "short-status-update"
@@ -88,8 +122,6 @@ export async function POST(request: Request) {
     ]);
 
     const outputs: GeneratedOutputs = {
-      internalUpdate,
-      externalUpdate,
       shortStatus,
       actionList
     };

@@ -12,7 +12,7 @@ export type OutputCardKey =
   | "shortStatus"
   | "actionList";
 
-export type GeneratedOutputs = Record<OutputCardKey, string>;
+export type GeneratedOutputs = Partial<Record<OutputCardKey, string>>;
 
 export type RaidOutput = {
   raid: string;

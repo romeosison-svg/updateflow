@@ -33,9 +33,12 @@ const sampleTranscripts = [
 
 const outputCards: Array<{ key: OutputCardKey; title: string }> = [
   { key: "shortStatus", title: "Status Update" },
-  { key: "actionList", title: "Action List" },
-  { key: "externalUpdate", title: "External Update" },
-  { key: "internalUpdate", title: "Internal Update" }
+  { key: "actionList", title: "Action List" }
+];
+
+const optionalOutputCards: Array<{ key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate">; title: string }> = [
+  { key: "internalUpdate", title: "Internal Update" },
+  { key: "externalUpdate", title: "External Update" }
 ];
 
 export default function ToolPage() {
@@ -44,6 +47,8 @@ export default function ToolPage() {
   const [raidOutput, setRaidOutput] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isExternalLoading, setIsExternalLoading] = useState(false);
+  const [isInternalLoading, setIsInternalLoading] = useState(false);
   const [isRaidLoading, setIsRaidLoading] = useState(false);
   const [copyLabels, setCopyLabels] = useState<
     Partial<Record<OutputCardKey | "raid", string>>
@@ -92,6 +97,66 @@ export default function ToolPage() {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateOptionalOutput = async (
+    key: "internalUpdate" | "externalUpdate",
+    errorLabel: string
+  ) => {
+    if (!transcript.trim()) {
+      setError(`Paste some meeting notes or a transcript before generating ${errorLabel}.`);
+      return;
+    }
+
+    setError("");
+
+    if (key === "internalUpdate") {
+      setIsInternalLoading(true);
+    } else {
+      setIsExternalLoading(true);
+    }
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript,
+          includeExternal: key === "externalUpdate",
+          includeInternal: key === "internalUpdate"
+        })
+      });
+
+      const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
+      const value = data.outputs?.[key];
+
+      if (!response.ok || !value) {
+        throw new Error(data.error ?? `Something went wrong while generating ${errorLabel}.`);
+      }
+
+      setOutputs((current) => ({
+        ...(current ?? {}),
+        [key]: value
+      }));
+      setCopyLabels((current) => ({
+        ...current,
+        [key]: "Copy"
+      }));
+    } catch (optionalError) {
+      setError(
+        optionalError instanceof Error
+          ? optionalError.message
+          : `Something went wrong while generating ${errorLabel}.`
+      );
+    } finally {
+      if (key === "internalUpdate") {
+        setIsInternalLoading(false);
+      } else {
+        setIsExternalLoading(false);
+      }
     }
   };
 
@@ -237,10 +302,10 @@ export default function ToolPage() {
             return (
               <section key={card.key} className="card output-card">
                 <div className="output-header">
-                <div>
-                  <h2>{card.title}</h2>
-                  <p>Copy the draft and refine as needed.</p>
-                </div>
+                  <div>
+                    <h2>{card.title}</h2>
+                    <p>Copy the draft and refine as needed.</p>
+                  </div>
                   <button
                     type="button"
                     className="secondary-button"
@@ -268,12 +333,71 @@ export default function ToolPage() {
             <button
               type="button"
               className="secondary-button"
+              onClick={() => handleGenerateOptionalOutput("internalUpdate", "the internal update")}
+              disabled={isLoading || isInternalLoading}
+            >
+              {isInternalLoading ? "Generating Internal Update..." : "Generate Internal Update"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => handleGenerateOptionalOutput("externalUpdate", "the external update")}
+              disabled={isLoading || isExternalLoading}
+            >
+              {isExternalLoading ? "Generating External Update..." : "Generate External Update"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
               onClick={handleGenerateRaid}
               disabled={isLoading || isRaidLoading}
             >
               {isRaidLoading ? "Generating RAID..." : "Generate RAID"}
             </button>
           </section>
+
+          {optionalOutputCards.map((card) => {
+            const value = outputs?.[card.key] ?? "";
+            const isCardLoading =
+              card.key === "internalUpdate" ? isInternalLoading : isExternalLoading;
+
+            if (!isCardLoading && !value) {
+              return null;
+            }
+
+            return (
+              <section key={card.key} className="card output-card">
+                <div className="output-header">
+                  <div>
+                    <h2>{card.title}</h2>
+                    <p>Copy the draft and refine as needed.</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => handleCopy(card.key, value)}
+                    disabled={!value}
+                  >
+                    {copyLabels[card.key] ?? "Copy"}
+                  </button>
+                </div>
+
+                <div className={`output-panel${!value ? " empty" : ""}`}>
+                  {isCardLoading ? (
+                    <p>
+                      {card.key === "internalUpdate"
+                        ? "Generating Internal Update..."
+                        : "Generating External Update..."}
+                    </p>
+                  ) : value ? (
+                    <pre>{value}</pre>
+                  ) : (
+                    <p>{card.title} will appear here.</p>
+                  )}
+                </div>
+              </section>
+            );
+          })}
 
           {(isRaidLoading || raidOutput) && (
             <section className="card output-card">
