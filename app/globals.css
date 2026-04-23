@@ -365,6 +365,8 @@ select {
 .raid-actions {
   display: flex;
   justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .output-header {
