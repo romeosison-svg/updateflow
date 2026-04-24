@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const valueItems = [
-  "Status update — ready to send",
+  "Status update - ready to send",
   "Action list with clear ownership and priority",
   "External stakeholder update",
   "Internal team update",
@@ -13,10 +13,10 @@ export default function LandingPage() {
     <main className="page-shell landing-shell">
       <section className="hero landing-hero">
         <span className="eyebrow">For project managers</span>
-        <h1>Meeting notes to a full update pack — in seconds.</h1>
+        <h1>From meeting notes to a full update pack in seconds.</h1>
         <p>
-          Paste rough notes from any meeting. Get a complete update pack — status
-          update, action list, stakeholder brief, and RAID log — so you can focus on
+          Paste rough notes from any meeting. Get a complete update pack (status
+          update, action list, stakeholder brief, and RAID log) so you can focus on
           judgement, not drafting.
         </p>
 
@@ -30,18 +30,18 @@ export default function LandingPage() {
         </div>
 
         <p className="compatibility-line">
-          Plugs into your existing workflow — works with any notes, Copilot summaries,
+          Plugs into your existing workflow: works with any notes, Copilot summaries,
           Zoom transcripts, or ChatGPT output.
         </p>
 
         <p className="credibility-line">
-          Built for PMs who already know what good looks like — but have better things
+          Built for PMs who already know what good looks like, but have better things
           to do than draft it.
         </p>
       </section>
 
       <section className="card landing-section" id="example-outputs">
-        <h2>After every meeting, you leave with a complete update pack — ready to review and send.</h2>
+        <h2>After every meeting, you leave with a complete update pack, ready to review and send.</h2>
         <div className="value-list">
           {valueItems.map((item) => (
             <div key={item} className="value-item">
@@ -54,7 +54,7 @@ export default function LandingPage() {
       <section className="card landing-section">
         <h2>Not a summary. A structured update, ready to send.</h2>
         <p>
-          Rough notes go in. A structured update pack comes out — formatted the way a
+          Rough notes go in. A structured update pack comes out, formatted the way a
           delivery-focused PM would write it, with the right sections, the right tone,
           and the right level of detail for each audience.
         </p>

@@ -272,13 +272,13 @@ export default function ToolPage() {
             <label className="field">
               <span>Meeting notes or transcript</span>
               <small className="helper-text">
-                Works best with sanitised notes — or paste freely and let the output
+                Works best with sanitised notes or paste freely and let the output
                 handle it.
               </small>
               <textarea
                 value={transcript}
                 onChange={(event) => setTranscript(event.target.value)}
-                placeholder="Rough notes, bullet points, a transcript — whatever came out of the meeting."
+                placeholder="Rough notes, bullet points or a transcript. Whatever came out of the meeting."
                 rows={14}
               />
             </label>
