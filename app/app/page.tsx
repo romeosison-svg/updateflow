@@ -41,18 +41,6 @@ const optionalOutputCards: Array<{ key: Extract<OutputCardKey, "externalUpdate" 
   { key: "externalUpdate", title: "External Update" }
 ];
 
-const visuallyHiddenStyles = {
-  position: "absolute",
-  width: "1px",
-  height: "1px",
-  padding: 0,
-  margin: "-1px",
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0
-} as const;
-
 export default function ToolPage() {
   const [transcript, setTranscript] = useState("");
   const [outputs, setOutputs] = useState<GeneratedOutputs | null>(null);
@@ -65,6 +53,24 @@ export default function ToolPage() {
   const [copyLabels, setCopyLabels] = useState<
     Partial<Record<OutputCardKey | "raid", string>>
   >({});
+
+  const primaryBtn =
+    "inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60";
+
+  const secondaryBtn =
+    "inline-flex items-center justify-center py-3 px-5 bg-transparent text-accent text-[0.9rem] font-medium tracking-[0.01em] border-[1.5px] border-accent rounded-input font-sans cursor-pointer transition-colors duration-150 enabled:hover:bg-accent-light disabled:cursor-not-allowed disabled:opacity-60";
+
+  const copyBtn =
+    "inline-flex items-center justify-center py-[0.35rem] px-3 text-[0.8rem] font-medium text-muted bg-transparent border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:text-accent hover:border-accent disabled:cursor-not-allowed disabled:opacity-60";
+
+  const cardClasses =
+    "bg-card border border-border rounded-control p-6 mobile:p-4 mobile:rounded-card";
+
+  const outputHeaderClasses =
+    "flex items-center justify-between gap-4 pb-3 border-b border-border mb-4 mobile:grid mobile:grid-cols-1";
+
+  const outputPanelBase =
+    "min-h-[260px] p-4 border border-border rounded-control bg-card";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -254,28 +260,36 @@ export default function ToolPage() {
   const raidCopyState = copyLabels.raid ?? "Copy";
 
   return (
-    <main className="page-shell">
-      <section className="hero">
-        <Link className="eyebrow eyebrow-link" href="/">
+    <main className="w-[min(960px,calc(100%-2rem))] mobile:w-[min(calc(100%-1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8">
+      <section className="mb-8">
+        <Link
+          className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase no-underline"
+          href="/"
+        >
           For project managers
         </Link>
-        <h1>Paste your notes. Get your update pack.</h1>
-        <p>
+        <h1 className="m-0 max-w-[12ch] mobile:max-w-none text-[clamp(2.5rem,6vw,4.5rem)] leading-tight text-text">
+          Paste your notes. Get your update pack.
+        </h1>
+        <p className="max-w-[52rem] mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
           Paste rough notes, generate the full update pack, then refine what needs your
           judgement.
         </p>
       </section>
 
-      <div className="tool-stack">
-        <section className="card">
-          <form className="generator-form" onSubmit={handleSubmit}>
-            <label className="field">
-              <span>Meeting notes or transcript</span>
-              <small className="helper-text">
+      <div className="grid gap-5">
+        <section className={cardClasses}>
+          <form className="grid gap-3" onSubmit={handleSubmit}>
+            <label className="grid gap-[0.55rem]">
+              <span className="font-sans text-[0.95rem] font-semibold">
+                Meeting notes or transcript
+              </span>
+              <small className="text-muted font-sans text-[0.88rem] leading-base">
                 Works best with sanitised notes or paste freely and let the output
                 handle it.
               </small>
               <textarea
+                className="w-full min-h-[320px] p-4 resize-y leading-base border border-border rounded-input bg-bg text-text font-sans transition-colors duration-150"
                 value={transcript}
                 onChange={(event) => setTranscript(event.target.value)}
                 placeholder="Rough notes, bullet points or a transcript. Whatever came out of the meeting."
@@ -283,17 +297,19 @@ export default function ToolPage() {
               />
             </label>
 
-            <p className={`char-count${transcript.length > 22500 ? " char-count--warning" : ""}`}>
+            <p className={`text-right font-sans text-[0.82rem] ${transcript.length > 22500 ? "text-error" : "text-muted"}`}>
               {transcript.length.toLocaleString()} / 25,000
             </p>
 
-            <p className="examples-label">Examples</p>
-            <div className="sample-row" aria-label="Sample transcript buttons">
+            <p className="m-0 text-muted font-sans text-[0.82rem] font-semibold tracking-[0.02em]">
+              Examples
+            </p>
+            <div className="flex flex-wrap gap-3 mobile:grid mobile:grid-cols-1" aria-label="Sample transcript buttons">
               {sampleTranscripts.map((sample) => (
                 <button
                   key={sample.id}
                   type="button"
-                  className="sample-button"
+                  className="inline-flex items-center py-2 px-4 bg-card text-muted text-[0.8rem] font-medium border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:border-accent hover:text-accent"
                   onClick={() => handleSampleClick(sample.transcript)}
                 >
                   {sample.label}
@@ -301,50 +317,54 @@ export default function ToolPage() {
               ))}
             </div>
 
-            <p className="input-note">
+            <p className="m-0 text-muted font-sans text-[0.88rem] leading-base">
               Sensitive names and details will be anonymised in the output.
             </p>
 
-            <div className="actions-row">
-              <button className="primary-button" type="submit" disabled={isLoading}>
+            <div className="flex flex-wrap items-center gap-y-3 gap-x-4">
+              <button className={primaryBtn} type="submit" disabled={isLoading}>
                 {isLoading ? "Turning notes into updates..." : "Generate update pack"}
               </button>
-              {error && <p className="error-message">{error}</p>}
+              {error && <p className="m-0 text-error font-sans">{error}</p>}
             </div>
           </form>
         </section>
 
-        <section className="output-stack">
+        <section className="grid gap-5">
           {outputCards.map((card) => {
             const value = outputs?.[card.key] ?? "";
             const copyState = copyLabels[card.key] ?? "Copy";
 
             return (
-              <section key={card.key} className="card output-card">
-                <div className="output-header">
+              <section key={card.key} className={`${cardClasses} grid gap-4`}>
+                <div className={outputHeaderClasses}>
                   <div>
-                    <h2>{card.title}</h2>
+                    <h2 className="m-0 text-[1.5rem]">{card.title}</h2>
                   </div>
                   <button
                     type="button"
-                    className="secondary-button"
+                    className={copyBtn}
                     onClick={() => handleCopy(card.key, value)}
                     disabled={!value}
                   >
                     {copyState}
-                    <span aria-live="polite" style={visuallyHiddenStyles}>
+                    <span aria-live="polite" className="sr-only">
                       {copyState === "Copied" ? "Copied to clipboard" : ""}
                     </span>
                   </button>
                 </div>
 
-                <div className={`output-panel${isLoading ? " output-panel--loading" : ""}${!value ? " empty" : ""}`}>
+                <div className={`${outputPanelBase}${!value ? " grid place-items-center" : ""}`}>
                   {isLoading ? (
-                    <p>Turning notes into updates...</p>
+                    <p className="m-0 text-muted font-sans animate-pulse-opacity">
+                      Turning notes into updates...
+                    </p>
                   ) : value ? (
-                    <pre>{value}</pre>
+                    <pre className="m-0 whitespace-pre-wrap break-words font-sans leading-base">
+                      {value}
+                    </pre>
                   ) : (
-                    <p>
+                    <p className="m-0 text-muted font-sans">
                       {card.key === "shortStatus"
                         ? "Your 2-3 sentence delivery summary will appear here."
                         : "Actions with owners and priorities will appear here."}
@@ -355,12 +375,14 @@ export default function ToolPage() {
             );
           })}
 
-          <section className="optional-outputs-group">
-            <p className="optional-outputs-label">Add to your pack</p>
-            <div className="raid-actions">
+          <section className="grid gap-3">
+            <p className="m-0 text-muted font-sans text-[0.82rem] font-semibold tracking-[0.02em]">
+              Add to your pack
+            </p>
+            <div className="flex justify-start flex-wrap gap-3">
               <button
                 type="button"
-                className="secondary-button"
+                className={`${secondaryBtn} mobile:w-full`}
                 onClick={() => handleGenerateOptionalOutput("internalUpdate", "the internal update")}
                 disabled={isLoading || isInternalLoading}
               >
@@ -368,7 +390,7 @@ export default function ToolPage() {
               </button>
               <button
                 type="button"
-                className="secondary-button"
+                className={`${secondaryBtn} mobile:w-full`}
                 onClick={() => handleGenerateOptionalOutput("externalUpdate", "the external update")}
                 disabled={isLoading || isExternalLoading}
               >
@@ -376,7 +398,7 @@ export default function ToolPage() {
               </button>
               <button
                 type="button"
-                className="secondary-button"
+                className={`${secondaryBtn} mobile:w-full`}
                 onClick={handleGenerateRaid}
                 disabled={isLoading || isRaidLoading}
               >
@@ -396,35 +418,37 @@ export default function ToolPage() {
             }
 
             return (
-              <section key={card.key} className="card output-card">
-                <div className="output-header">
+              <section key={card.key} className={`${cardClasses} grid gap-4`}>
+                <div className={outputHeaderClasses}>
                   <div>
-                    <h2>{card.title}</h2>
+                    <h2 className="m-0 text-[1.5rem]">{card.title}</h2>
                   </div>
                   <button
                     type="button"
-                    className="secondary-button"
+                    className={copyBtn}
                     onClick={() => handleCopy(card.key, value)}
                     disabled={!value}
                   >
                     {copyState}
-                    <span aria-live="polite" style={visuallyHiddenStyles}>
+                    <span aria-live="polite" className="sr-only">
                       {copyState === "Copied" ? "Copied to clipboard" : ""}
                     </span>
                   </button>
                 </div>
 
-                <div className={`output-panel${isCardLoading ? " output-panel--loading" : ""}${!value ? " empty" : ""}`}>
+                <div className={`${outputPanelBase}${!value ? " grid place-items-center" : ""}`}>
                   {isCardLoading ? (
-                    <p>
+                    <p className="m-0 text-muted font-sans animate-pulse-opacity">
                       {card.key === "internalUpdate"
                         ? "Generating Internal Update..."
                         : "Generating External Update..."}
                     </p>
                   ) : value ? (
-                    <pre>{value}</pre>
+                    <pre className="m-0 whitespace-pre-wrap break-words font-sans leading-base">
+                      {value}
+                    </pre>
                   ) : (
-                    <p>
+                    <p className="m-0 text-muted font-sans">
                       {card.key === "internalUpdate"
                         ? "Your internal team update will appear here."
                         : "Your stakeholder-facing update will appear here."}
@@ -436,31 +460,37 @@ export default function ToolPage() {
           })}
 
           {(isRaidLoading || raidOutput) && (
-            <section className="card output-card">
-              <div className="output-header">
+            <section className={`${cardClasses} grid gap-4`}>
+              <div className={outputHeaderClasses}>
                 <div>
-                  <h2>RAID</h2>
+                  <h2 className="m-0 text-[1.5rem]">RAID</h2>
                 </div>
                 <button
                   type="button"
-                  className="secondary-button"
+                  className={copyBtn}
                   onClick={() => handleCopy("raid", raidOutput)}
                   disabled={!raidOutput}
                 >
                   {raidCopyState}
-                  <span aria-live="polite" style={visuallyHiddenStyles}>
+                  <span aria-live="polite" className="sr-only">
                     {raidCopyState === "Copied" ? "Copied to clipboard" : ""}
                   </span>
                 </button>
               </div>
 
-              <div className={`output-panel${isRaidLoading ? " output-panel--loading" : ""}${!raidOutput ? " empty" : ""}`}>
+              <div className={`${outputPanelBase}${!raidOutput ? " grid place-items-center" : ""}`}>
                 {isRaidLoading ? (
-                  <p>Generating RAID...</p>
+                  <p className="m-0 text-muted font-sans animate-pulse-opacity">
+                    Generating RAID...
+                  </p>
                 ) : raidOutput ? (
-                  <pre>{raidOutput}</pre>
+                  <pre className="m-0 whitespace-pre-wrap break-words font-sans leading-base">
+                    {raidOutput}
+                  </pre>
                 ) : (
-                  <p>Risks, assumptions, issues, and dependencies will appear here.</p>
+                  <p className="m-0 text-muted font-sans">
+                    Risks, assumptions, issues, and dependencies will appear here.
+                  </p>
                 )}
               </div>
             </section>
