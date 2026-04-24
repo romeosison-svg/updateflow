@@ -30,8 +30,7 @@ export default function LandingPage() {
         </div>
 
         <p className="compatibility-line">
-          Plugs into your existing workflow: works with any notes, Copilot summaries,
-          Zoom transcripts, or ChatGPT output.
+          Works with any notes, Copilot summaries, Zoom transcripts, or ChatGPT output.
         </p>
 
         <p className="credibility-line">
