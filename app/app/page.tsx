@@ -257,7 +257,7 @@ export default function ToolPage() {
     <main className="page-shell">
       <section className="hero">
         <Link className="eyebrow eyebrow-link" href="/">
-          Updateflow
+          For project managers
         </Link>
         <h1>Paste your notes. Get your update pack.</h1>
         <p>
