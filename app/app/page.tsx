@@ -41,6 +41,18 @@ const optionalOutputCards: Array<{ key: Extract<OutputCardKey, "externalUpdate" 
   { key: "externalUpdate", title: "External Update" }
 ];
 
+const visuallyHiddenStyles = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0
+} as const;
+
 export default function ToolPage() {
   const [transcript, setTranscript] = useState("");
   const [outputs, setOutputs] = useState<GeneratedOutputs | null>(null);
@@ -239,6 +251,8 @@ export default function ToolPage() {
     }
   };
 
+  const raidCopyState = copyLabels.raid ?? "Copy";
+
   return (
     <main className="page-shell">
       <section className="hero">
@@ -301,6 +315,7 @@ export default function ToolPage() {
         <section className="output-stack">
           {outputCards.map((card) => {
             const value = outputs?.[card.key] ?? "";
+            const copyState = copyLabels[card.key] ?? "Copy";
 
             return (
               <section key={card.key} className="card output-card">
@@ -315,7 +330,10 @@ export default function ToolPage() {
                     onClick={() => handleCopy(card.key, value)}
                     disabled={!value}
                   >
-                    {copyLabels[card.key] ?? "Copy"}
+                    {copyState}
+                    <span aria-live="polite" style={visuallyHiddenStyles}>
+                      {copyState === "Copied" ? "Copied to clipboard" : ""}
+                    </span>
                   </button>
                 </div>
 
@@ -366,6 +384,7 @@ export default function ToolPage() {
             const value = outputs?.[card.key] ?? "";
             const isCardLoading =
               card.key === "internalUpdate" ? isInternalLoading : isExternalLoading;
+            const copyState = copyLabels[card.key] ?? "Copy";
 
             if (!isCardLoading && !value) {
               return null;
@@ -384,7 +403,10 @@ export default function ToolPage() {
                     onClick={() => handleCopy(card.key, value)}
                     disabled={!value}
                   >
-                    {copyLabels[card.key] ?? "Copy"}
+                    {copyState}
+                    <span aria-live="polite" style={visuallyHiddenStyles}>
+                      {copyState === "Copied" ? "Copied to clipboard" : ""}
+                    </span>
                   </button>
                 </div>
 
@@ -418,7 +440,10 @@ export default function ToolPage() {
                   onClick={() => handleCopy("raid", raidOutput)}
                   disabled={!raidOutput}
                 >
-                  {copyLabels.raid ?? "Copy"}
+                  {raidCopyState}
+                  <span aria-live="polite" style={visuallyHiddenStyles}>
+                    {raidCopyState === "Copied" ? "Copied to clipboard" : ""}
+                  </span>
                 </button>
               </div>
 
