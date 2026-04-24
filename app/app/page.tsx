@@ -263,15 +263,15 @@ export default function ToolPage() {
     <main className="w-[min(960px,calc(100%_-_2rem))] mobile:w-[min(calc(100%_-_1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8">
       <section className="mb-8">
         <Link
-          className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
+          className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase font-sans no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
           href="/"
         >
           For project managers
         </Link>
-        <h1 className="m-0 max-w-[12ch] mobile:max-w-none text-[clamp(2.5rem,6vw,4.5rem)] leading-tight text-text">
+        <h1 className="m-0 max-w-[12ch] mobile:max-w-none text-[clamp(2.5rem,6vw,4.5rem)] leading-tight text-text font-bold">
           Paste your notes. Get your update pack.
         </h1>
-        <p className="max-w-[52rem] mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
+        <p className="mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
           Paste rough notes, generate the full update pack, then refine what needs your
           judgement.
         </p>
@@ -325,7 +325,7 @@ export default function ToolPage() {
               <button className={primaryBtn} type="submit" disabled={isLoading}>
                 {isLoading ? "Turning notes into updates..." : "Generate update pack"}
               </button>
-              {error && <p className="m-0 text-error font-sans">{error}</p>}
+              {error && <p className="m-0 text-error text-[0.88rem] font-sans">{error}</p>}
             </div>
           </form>
         </section>
@@ -339,7 +339,7 @@ export default function ToolPage() {
               <section key={card.key} className={`${cardClasses} grid gap-4`}>
                 <div className={outputHeaderClasses}>
                   <div>
-                    <h2 className="m-0 text-[1.5rem]">{card.title}</h2>
+                    <h2 className="m-0 text-2xl font-semibold">{card.title}</h2>
                   </div>
                   <button
                     type="button"
@@ -356,15 +356,15 @@ export default function ToolPage() {
 
                 <div className={`${outputPanelBase}${!value ? " grid place-items-center" : ""}`}>
                   {isLoading ? (
-                    <p className="m-0 text-muted font-sans animate-pulse-opacity">
+                    <p className="m-0 text-muted text-base font-sans animate-pulse-opacity">
                       Turning notes into updates...
                     </p>
                   ) : value ? (
-                    <pre className="m-0 whitespace-pre-wrap break-words font-sans leading-base">
+                    <pre className="m-0 whitespace-pre-wrap break-words text-base font-sans leading-base">
                       {value}
                     </pre>
                   ) : (
-                    <p className="m-0 text-muted font-sans">
+                    <p className="m-0 text-muted text-base font-sans">
                       {card.key === "shortStatus"
                         ? "Your 2-3 sentence delivery summary will appear here."
                         : "Actions with owners and priorities will appear here."}
@@ -421,7 +421,7 @@ export default function ToolPage() {
               <section key={card.key} className={`${cardClasses} grid gap-4`}>
                 <div className={outputHeaderClasses}>
                   <div>
-                    <h2 className="m-0 text-[1.5rem]">{card.title}</h2>
+                    <h2 className="m-0 text-2xl font-semibold">{card.title}</h2>
                   </div>
                   <button
                     type="button"
@@ -438,17 +438,17 @@ export default function ToolPage() {
 
                 <div className={`${outputPanelBase}${!value ? " grid place-items-center" : ""}`}>
                   {isCardLoading ? (
-                    <p className="m-0 text-muted font-sans animate-pulse-opacity">
+                    <p className="m-0 text-muted text-base font-sans animate-pulse-opacity">
                       {card.key === "internalUpdate"
                         ? "Generating Internal Update..."
                         : "Generating External Update..."}
                     </p>
                   ) : value ? (
-                    <pre className="m-0 whitespace-pre-wrap break-words font-sans leading-base">
+                    <pre className="m-0 whitespace-pre-wrap break-words text-base font-sans leading-base">
                       {value}
                     </pre>
                   ) : (
-                    <p className="m-0 text-muted font-sans">
+                    <p className="m-0 text-muted text-base font-sans">
                       {card.key === "internalUpdate"
                         ? "Your internal team update will appear here."
                         : "Your stakeholder-facing update will appear here."}
@@ -463,7 +463,7 @@ export default function ToolPage() {
             <section className={`${cardClasses} grid gap-4`}>
               <div className={outputHeaderClasses}>
                 <div>
-                  <h2 className="m-0 text-[1.5rem]">RAID</h2>
+                  <h2 className="m-0 text-2xl font-semibold">RAID</h2>
                 </div>
                 <button
                   type="button"
@@ -480,15 +480,15 @@ export default function ToolPage() {
 
               <div className={`${outputPanelBase}${!raidOutput ? " grid place-items-center" : ""}`}>
                 {isRaidLoading ? (
-                  <p className="m-0 text-muted font-sans animate-pulse-opacity">
+                  <p className="m-0 text-muted text-base font-sans animate-pulse-opacity">
                     Generating RAID...
                   </p>
                 ) : raidOutput ? (
-                  <pre className="m-0 whitespace-pre-wrap break-words font-sans leading-base">
+                  <pre className="m-0 whitespace-pre-wrap break-words text-base font-sans leading-base">
                     {raidOutput}
                   </pre>
                 ) : (
-                  <p className="m-0 text-muted font-sans">
+                  <p className="m-0 text-muted text-base font-sans">
                     Risks, assumptions, issues, and dependencies will appear here.
                   </p>
                 )}
