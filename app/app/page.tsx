@@ -224,7 +224,7 @@ export default function ToolPage() {
           ...current,
           [key]: "Copy"
         }));
-      }, 2000);
+      }, 3000);
     } catch {
       setCopyLabels((current) => ({
         ...current,
@@ -235,7 +235,7 @@ export default function ToolPage() {
           ...current,
           [key]: "Copy"
         }));
-      }, 2000);
+      }, 3000);
     }
   };
 
@@ -262,10 +262,14 @@ export default function ToolPage() {
               <textarea
                 value={transcript}
                 onChange={(event) => setTranscript(event.target.value)}
-                placeholder="Paste raw notes, action items, decisions, blockers, or a transcript..."
+                placeholder="Your meeting notes or transcript goes here"
                 rows={14}
               />
             </label>
+
+            <p className={`char-count${transcript.length > 22500 ? " char-count--warning" : ""}`}>
+              {transcript.length.toLocaleString()} / 25,000
+            </p>
 
             <p className="examples-label">Examples</p>
             <div className="sample-row" aria-label="Sample transcript buttons">
@@ -282,8 +286,7 @@ export default function ToolPage() {
             </div>
 
             <p className="input-note">
-              Paste raw notes, Updateflow will generalise sensitive names and details in the
-              output.
+              Names and sensitive details will be generalised in the output.
             </p>
 
             <div className="actions-row">
@@ -316,7 +319,7 @@ export default function ToolPage() {
                   </button>
                 </div>
 
-                <div className={`output-panel${!value ? " empty" : ""}`}>
+                <div className={`output-panel${isLoading ? " output-panel--loading" : ""}${!value ? " empty" : ""}`}>
                   {isLoading ? (
                     <p>Turning notes into updates...</p>
                   ) : value ? (
@@ -329,31 +332,34 @@ export default function ToolPage() {
             );
           })}
 
-          <section className="raid-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => handleGenerateOptionalOutput("internalUpdate", "the internal update")}
-              disabled={isLoading || isInternalLoading}
-            >
-              {isInternalLoading ? "Generating Internal Update..." : "Generate Internal Update"}
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => handleGenerateOptionalOutput("externalUpdate", "the external update")}
-              disabled={isLoading || isExternalLoading}
-            >
-              {isExternalLoading ? "Generating External Update..." : "Generate External Update"}
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={handleGenerateRaid}
-              disabled={isLoading || isRaidLoading}
-            >
-              {isRaidLoading ? "Generating RAID..." : "Generate RAID"}
-            </button>
+          <section className="optional-outputs-group">
+            <p className="optional-outputs-label">Optional outputs</p>
+            <div className="raid-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => handleGenerateOptionalOutput("internalUpdate", "the internal update")}
+                disabled={isLoading || isInternalLoading}
+              >
+                {isInternalLoading ? "Generating Internal Update..." : "Generate Internal Update"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => handleGenerateOptionalOutput("externalUpdate", "the external update")}
+                disabled={isLoading || isExternalLoading}
+              >
+                {isExternalLoading ? "Generating External Update..." : "Generate External Update"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={handleGenerateRaid}
+                disabled={isLoading || isRaidLoading}
+              >
+                {isRaidLoading ? "Generating RAID..." : "Generate RAID"}
+              </button>
+            </div>
           </section>
 
           {optionalOutputCards.map((card) => {
@@ -382,7 +388,7 @@ export default function ToolPage() {
                   </button>
                 </div>
 
-                <div className={`output-panel${!value ? " empty" : ""}`}>
+                <div className={`output-panel${isCardLoading ? " output-panel--loading" : ""}${!value ? " empty" : ""}`}>
                   {isCardLoading ? (
                     <p>
                       {card.key === "internalUpdate"
@@ -416,7 +422,7 @@ export default function ToolPage() {
                 </button>
               </div>
 
-              <div className={`output-panel${!raidOutput ? " empty" : ""}`}>
+              <div className={`output-panel${isRaidLoading ? " output-panel--loading" : ""}${!raidOutput ? " empty" : ""}`}>
                 {isRaidLoading ? (
                   <p>Generating RAID...</p>
                 ) : raidOutput ? (

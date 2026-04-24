@@ -11,6 +11,26 @@
   --accent-soft: rgba(15, 118, 110, 0.12);
   --error: #b42318;
   --shadow: 0 18px 60px rgba(31, 41, 51, 0.08);
+  /* Spacing scale */
+  --space-1: 0.35rem;
+  --space-2: 0.55rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  /* Border radius */
+  --radius-pill: 999px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  /* Line heights */
+  --leading-tight: 1.1;
+  --leading-base: 1.6;
+  --leading-relaxed: 1.7;
 }
 
 * {
@@ -41,16 +61,16 @@ select {
 .page-shell {
   width: min(960px, calc(100% - 2rem));
   margin: 0 auto;
-  padding: 4rem 0 5rem;
+  padding: var(--space-16) 0 var(--space-20);
 }
 
 .landing-shell {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--space-5);
 }
 
 .hero {
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
 }
 
 .landing-hero {
@@ -59,9 +79,9 @@ select {
 
 .eyebrow {
   display: inline-block;
-  margin-bottom: 1rem;
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
+  margin-bottom: var(--space-4);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
   background: var(--accent-soft);
   color: var(--accent);
   font-size: 0.9rem;
@@ -77,24 +97,24 @@ select {
   margin: 0;
   max-width: 12ch;
   font-size: clamp(2.5rem, 6vw, 4.5rem);
-  line-height: 0.95;
+  line-height: var(--leading-tight);
 }
 
 .hero p {
   max-width: 42rem;
-  margin: 1rem 0 0;
+  margin: var(--space-4) 0 0;
   color: var(--muted);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 1.05rem;
-  line-height: 1.7;
+  line-height: var(--leading-relaxed);
 }
 
 .landing-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.9rem 1rem;
-  margin-top: 1.5rem;
+  gap: var(--space-4) var(--space-4);
+  margin-top: var(--space-6);
 }
 
 .landing-link {
@@ -106,7 +126,7 @@ select {
 
 .secondary-link {
   color: var(--accent);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-weight: 600;
   text-decoration: none;
 }
@@ -117,25 +137,25 @@ select {
 
 .credibility-line {
   max-width: 46rem;
-  margin-top: 1.25rem;
-  color: var(--text);
-  font-family: "Segoe UI", sans-serif;
+  margin-top: var(--space-5);
+  color: var(--muted);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.98rem;
-  line-height: 1.65;
+  line-height: var(--leading-relaxed);
 }
 
 .compatibility-line {
-  margin-top: 0.9rem;
+  margin-top: var(--space-4);
   color: var(--muted);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.9rem;
-  line-height: 1.55;
+  line-height: var(--leading-base);
 }
 
 .card {
-  padding: 1.5rem;
+  padding: var(--space-6);
   border: 1px solid var(--border);
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   backdrop-filter: blur(16px);
   box-shadow: var(--shadow);
@@ -143,19 +163,19 @@ select {
 
 .landing-section {
   display: grid;
-  gap: 0.9rem;
+  gap: var(--space-4);
 }
 
 .landing-section h2 {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
 }
 
 .landing-section p {
   margin: 0;
   color: var(--muted);
-  font-family: "Segoe UI", sans-serif;
-  line-height: 1.7;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: var(--leading-relaxed);
 }
 
 .supporting-line {
@@ -166,30 +186,30 @@ select {
 .value-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: var(--space-4);
 }
 
 .value-item {
-  padding: 1rem 1.05rem;
+  padding: var(--space-4) var(--space-4);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.72);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-weight: 600;
 }
 
 .demo-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: var(--space-4);
 }
 
 .demo-card {
   display: grid;
-  gap: 0.6rem;
-  padding: 1rem 1.05rem;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.72);
 }
 
@@ -199,7 +219,7 @@ select {
 
 .demo-label {
   color: var(--accent);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -212,51 +232,51 @@ select {
 
 .tool-stack {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--space-5);
 }
 
 .generator-form {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--space-3);
 }
 
 .field {
   display: grid;
-  gap: 0.55rem;
+  gap: var(--space-2);
 }
 
 .field span,
 .field legend {
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
 }
 
 .helper-text {
   color: var(--muted);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.88rem;
-  line-height: 1.4;
+  line-height: var(--leading-base);
 }
 
 .field textarea,
 .field select {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   background: var(--surface-strong);
   color: var(--text);
 }
 
 .field textarea {
   min-height: 320px;
-  padding: 1rem 1.05rem;
+  padding: var(--space-4) var(--space-4);
   resize: vertical;
-  line-height: 1.6;
+  line-height: var(--leading-base);
 }
 
 .field select {
-  padding: 0.9rem 1rem;
+  padding: var(--space-4) var(--space-4);
 }
 
 .field textarea:focus,
@@ -264,7 +284,7 @@ select {
 .sample-button:focus,
 .primary-button:focus,
 .secondary-button:focus {
-  outline: 2px solid rgba(15, 118, 110, 0.3);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -272,13 +292,13 @@ select {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem 1rem;
+  gap: var(--space-3) var(--space-4);
 }
 
 .examples-label {
-  margin: 0 0 -0.35rem;
+  margin: 0;
   color: var(--muted);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -287,25 +307,25 @@ select {
 .sample-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .input-note {
-  margin: -0.35rem 0 0;
+  margin: 0;
   color: var(--muted);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.88rem;
-  line-height: 1.45;
+  line-height: var(--leading-base);
 }
 
 .sample-button {
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.65rem 0.95rem;
+  border-radius: var(--radius-pill);
+  padding: var(--space-3) var(--space-4);
   background: rgba(255, 255, 255, 0.75);
   color: var(--text);
   cursor: pointer;
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.9rem;
   transition: border-color 150ms ease, transform 150ms ease, background-color 150ms ease;
 }
@@ -319,9 +339,9 @@ select {
 .primary-button,
 .secondary-button {
   border: 0;
-  border-radius: 14px;
-  padding: 0.9rem 1.2rem;
-  font-family: "Segoe UI", sans-serif;
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.96rem;
   font-weight: 600;
   cursor: pointer;
@@ -357,30 +377,44 @@ select {
 .error-message {
   margin: 0;
   color: var(--error);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .output-card {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .output-stack {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--space-5);
+}
+
+.optional-outputs-group {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.optional-outputs-label {
+  margin: 0;
+  color: var(--muted);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .raid-actions {
   display: flex;
   justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .output-header {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--space-4);
   align-items: center;
 }
 
@@ -390,16 +424,16 @@ select {
 }
 
 .output-header p {
-  margin: 0.35rem 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .output-panel {
   min-height: 260px;
-  padding: 1rem 1.1rem;
+  padding: var(--space-4) var(--space-4);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.92);
 }
 
@@ -415,25 +449,36 @@ select {
 
 .output-panel p {
   color: var(--muted);
-  font-family: "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .output-panel pre {
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: "Segoe UI", sans-serif;
-  line-height: 1.6;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: var(--leading-base);
+}
+
+.char-count {
+  color: var(--muted);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.char-count--warning {
+  color: var(--error);
 }
 
 @media (max-width: 720px) {
   .page-shell {
     width: min(100% - 1rem, 960px);
-    padding: 1.25rem 0 2rem;
+    padding: var(--space-5) 0 var(--space-8);
   }
 
   .card {
-    padding: 1rem;
-    border-radius: 20px;
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
   }
 
   .output-header {
@@ -457,11 +502,26 @@ select {
     justify-content: stretch;
   }
 
-  .secondary-button {
+  .raid-actions .secondary-button {
     width: 100%;
   }
 
   .hero h1 {
     max-width: none;
   }
+}
+
+@keyframes pulse-opacity {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.output-panel--loading p {
+  animation: pulse-opacity 1.4s ease-in-out infinite;
 }

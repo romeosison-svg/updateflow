@@ -12,9 +12,7 @@ export default function LandingPage() {
   return (
     <main className="page-shell landing-shell">
       <section className="hero landing-hero">
-        <Link className="eyebrow eyebrow-link" href="/">
-          Updateflow
-        </Link>
+        <span className="eyebrow">Updateflow</span>
         <h1>Turn messy notes or AI summaries into updates you can actually send</h1>
         <p>
           Updateflow gives PMs a clean, structured status update and action list in
