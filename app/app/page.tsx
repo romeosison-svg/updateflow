@@ -259,9 +259,10 @@ export default function ToolPage() {
         <Link className="eyebrow eyebrow-link" href="/">
           Updateflow
         </Link>
-        <h1>Turn meeting notes into project-ready updates</h1>
+        <h1>Paste your notes. Get your update pack.</h1>
         <p>
-          Paste rough notes, generate the full update pack, and refine whatever you need next.
+          Paste rough notes, generate the full update pack, then refine what needs your
+          judgement.
         </p>
       </section>
 
@@ -271,12 +272,13 @@ export default function ToolPage() {
             <label className="field">
               <span>Meeting notes or transcript</span>
               <small className="helper-text">
-                Designed for non-sensitive or sanitised meeting notes
+                Works best with sanitised notes — or paste freely and let the output
+                handle it.
               </small>
               <textarea
                 value={transcript}
                 onChange={(event) => setTranscript(event.target.value)}
-                placeholder="Your meeting notes or transcript goes here"
+                placeholder="Rough notes, bullet points, a transcript — whatever came out of the meeting."
                 rows={14}
               />
             </label>
@@ -300,12 +302,12 @@ export default function ToolPage() {
             </div>
 
             <p className="input-note">
-              Names and sensitive details will be generalised in the output.
+              Sensitive names and details will be anonymised in the output.
             </p>
 
             <div className="actions-row">
               <button className="primary-button" type="submit" disabled={isLoading}>
-                {isLoading ? "Turning notes into updates..." : "Generate"}
+                {isLoading ? "Turning notes into updates..." : "Generate update pack"}
               </button>
               {error && <p className="error-message">{error}</p>}
             </div>
@@ -322,7 +324,6 @@ export default function ToolPage() {
                 <div className="output-header">
                   <div>
                     <h2>{card.title}</h2>
-                    <p>Copy the draft and refine as needed.</p>
                   </div>
                   <button
                     type="button"
@@ -343,7 +344,11 @@ export default function ToolPage() {
                   ) : value ? (
                     <pre>{value}</pre>
                   ) : (
-                    <p>{card.title} will appear here.</p>
+                    <p>
+                      {card.key === "shortStatus"
+                        ? "Your 2-3 sentence delivery summary will appear here."
+                        : "Actions with owners and priorities will appear here."}
+                    </p>
                   )}
                 </div>
               </section>
@@ -351,7 +356,7 @@ export default function ToolPage() {
           })}
 
           <section className="optional-outputs-group">
-            <p className="optional-outputs-label">Optional outputs</p>
+            <p className="optional-outputs-label">Add to your pack</p>
             <div className="raid-actions">
               <button
                 type="button"
@@ -359,7 +364,7 @@ export default function ToolPage() {
                 onClick={() => handleGenerateOptionalOutput("internalUpdate", "the internal update")}
                 disabled={isLoading || isInternalLoading}
               >
-                {isInternalLoading ? "Generating Internal Update..." : "Generate Internal Update"}
+                {isInternalLoading ? "Generating Internal Update..." : "Internal Update"}
               </button>
               <button
                 type="button"
@@ -367,7 +372,7 @@ export default function ToolPage() {
                 onClick={() => handleGenerateOptionalOutput("externalUpdate", "the external update")}
                 disabled={isLoading || isExternalLoading}
               >
-                {isExternalLoading ? "Generating External Update..." : "Generate External Update"}
+                {isExternalLoading ? "Generating External Update..." : "External Update"}
               </button>
               <button
                 type="button"
@@ -375,7 +380,7 @@ export default function ToolPage() {
                 onClick={handleGenerateRaid}
                 disabled={isLoading || isRaidLoading}
               >
-                {isRaidLoading ? "Generating RAID..." : "Generate RAID"}
+                {isRaidLoading ? "Generating RAID..." : "RAID Log"}
               </button>
             </div>
           </section>
@@ -395,7 +400,6 @@ export default function ToolPage() {
                 <div className="output-header">
                   <div>
                     <h2>{card.title}</h2>
-                    <p>Copy the draft and refine as needed.</p>
                   </div>
                   <button
                     type="button"
@@ -420,7 +424,11 @@ export default function ToolPage() {
                   ) : value ? (
                     <pre>{value}</pre>
                   ) : (
-                    <p>{card.title} will appear here.</p>
+                    <p>
+                      {card.key === "internalUpdate"
+                        ? "Your internal team update will appear here."
+                        : "Your stakeholder-facing update will appear here."}
+                    </p>
                   )}
                 </div>
               </section>
@@ -432,7 +440,6 @@ export default function ToolPage() {
               <div className="output-header">
                 <div>
                   <h2>RAID</h2>
-                  <p>Copy the draft and refine as needed.</p>
                 </div>
                 <button
                   type="button"
@@ -453,7 +460,7 @@ export default function ToolPage() {
                 ) : raidOutput ? (
                   <pre>{raidOutput}</pre>
                 ) : (
-                  <p>RAID will appear here.</p>
+                  <p>Risks, assumptions, issues, and dependencies will appear here.</p>
                 )}
               </div>
             </section>

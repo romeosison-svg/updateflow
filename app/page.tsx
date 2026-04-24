@@ -1,45 +1,47 @@
 import Link from "next/link";
 
 const valueItems = [
-  "A short status update you can send immediately",
-  "A clear, structured action list",
-  "A stakeholder-ready external update",
-  "A detailed internal update",
-  "An optional RAID log when you need it"
+  "Status update — ready to send",
+  "Action list with clear ownership and priority",
+  "External stakeholder update",
+  "Internal team update",
+  "RAID log, generated on demand"
 ] as const;
 
 export default function LandingPage() {
   return (
     <main className="page-shell landing-shell">
       <section className="hero landing-hero">
-        <span className="eyebrow">Updateflow</span>
-        <h1>Turn messy notes or AI summaries into updates you can actually send</h1>
+        <span className="eyebrow">For project managers</span>
+        <h1>Meeting notes to a full update pack — in seconds.</h1>
         <p>
-          Updateflow gives PMs a clean, structured status update and action list in
-          seconds, so you spend less time rewriting and more time sending.
+          Paste rough notes from any meeting. Get a complete update pack — status
+          update, action list, stakeholder brief, and RAID log — so you can focus on
+          judgement, not drafting.
         </p>
 
         <div className="landing-actions">
           <Link className="primary-button landing-link" href="/app">
-            Try the app
+            Generate your first update
           </Link>
           <a className="secondary-link" href="#example-outputs">
-            See example outputs
+            See a sample output
           </a>
         </div>
 
         <p className="compatibility-line">
-          Works with your notes or summaries from tools like Copilot, ChatGPT, or Zoom.
+          Plugs into your existing workflow — works with any notes, Copilot summaries,
+          Zoom transcripts, or ChatGPT output.
         </p>
 
         <p className="credibility-line">
-          Built for PMs who already know what good looks like, but don&apos;t want to waste
-          time drafting it from scratch.
+          Built for PMs who already know what good looks like — but have better things
+          to do than draft it.
         </p>
       </section>
 
       <section className="card landing-section" id="example-outputs">
-        <h2>After every call, you leave with a strong first draft you can use straight away</h2>
+        <h2>After every meeting, you leave with a complete update pack — ready to review and send.</h2>
         <div className="value-list">
           {valueItems.map((item) => (
             <div key={item} className="value-item">
@@ -50,20 +52,11 @@ export default function LandingPage() {
       </section>
 
       <section className="card landing-section">
-        <h2>Not a summary. A starting point you can use.</h2>
+        <h2>Not a summary. A structured update, ready to send.</h2>
         <p>
-          Updateflow doesn&apos;t just summarise meetings. It turns rough notes into
-          structured outputs a senior PM can actually use, without starting from a blank
-          page.
-        </p>
-      </section>
-
-      <section className="card landing-section">
-        <h2>Stay in flow</h2>
-        <p>
-          After every meeting, Updateflow turns rough notes into usable outputs in
-          seconds, so you can focus on judgement, prioritisation, and stakeholder
-          management, not rewriting updates.
+          Rough notes go in. A structured update pack comes out — formatted the way a
+          delivery-focused PM would write it, with the right sections, the right tone,
+          and the right level of detail for each audience.
         </p>
       </section>
 
@@ -77,16 +70,17 @@ export default function LandingPage() {
           <div className="demo-card">
             <span className="demo-label">Output</span>
             <p>
-              API integration is delayed due to a vendor dependency, creating a risk to the
-              planned UAT start next week. Focus this week is on securing vendor delivery
-              and confirming UAT environment readiness.
+              API integration remains delayed due to a vendor dependency, placing the
+              planned UAT start date at risk. Priority this week is securing confirmed
+              delivery from the vendor and validating UAT environment readiness before
+              the scheduled test window.
             </p>
           </div>
         </div>
       </section>
 
       <section className="card landing-section landing-cta">
-        <h2>Start with your next meeting</h2>
+        <h2>One meeting. One update pack. No drafting.</h2>
         <Link className="primary-button landing-link" href="/app">
           Open Updateflow
         </Link>
