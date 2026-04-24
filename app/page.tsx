@@ -18,7 +18,7 @@ export default function LandingPage() {
         <h1 className="m-0 max-w-[12ch] mobile:max-w-none text-[clamp(2.5rem,6vw,4.5rem)] leading-tight text-text">
           From meeting notes to a full update pack in seconds.
         </h1>
-        <p className="max-w-[52rem] mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
+        <p className="mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
           Paste rough notes from any meeting. Get a complete update pack (status
           update, action list, stakeholder brief, and RAID log) so you can focus on
           judgement, not drafting.
@@ -39,11 +39,11 @@ export default function LandingPage() {
           </a>
         </div>
 
-        <p className="max-w-[52rem] mt-4 text-muted font-sans text-[0.9rem] leading-base">
+        <p className="mt-4 text-muted font-sans text-[0.9rem] leading-base">
           Works with any notes, Copilot summaries, Zoom transcripts, or ChatGPT output.
         </p>
 
-        <p className="max-w-[52rem] mt-5 text-muted font-sans text-[0.98rem] leading-relaxed">
+        <p className="mt-5 text-muted font-sans text-[0.98rem] leading-relaxed">
           Built for PMs who already know what good looks like, but have better things
           to do than draft it.
         </p>
