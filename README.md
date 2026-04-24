@@ -53,6 +53,16 @@ npm run dev
 
 You can also copy `.env.example` to `.env.local` and then fill in your real values.
 
+## Testing
+
+Run the regression tests with:
+
+```bash
+npm test
+```
+
+These tests protect the current MVP output configuration, prompt guardrails for Status Update and Action List generation, and the core validation rules around transcript, output type, and stakeholder audience handling.
+
 ## How it works
 
 - The UI lives in `app/page.tsx`
