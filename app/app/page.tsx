@@ -55,13 +55,13 @@ export default function ToolPage() {
   >({});
 
   const primaryBtn =
-    "inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 enabled:hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
   const secondaryBtn =
-    "inline-flex items-center justify-center py-3 px-5 bg-transparent text-accent text-[0.9rem] font-medium tracking-[0.01em] border-[1.5px] border-accent rounded-input font-sans cursor-pointer transition-colors duration-150 enabled:hover:bg-accent-light disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex items-center justify-center py-3 px-5 bg-transparent text-accent text-[0.9rem] font-medium tracking-[0.01em] border-[1.5px] border-accent rounded-input font-sans cursor-pointer transition-colors duration-150 enabled:hover:bg-accent-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
   const copyBtn =
-    "inline-flex items-center justify-center py-[0.35rem] px-3 text-[0.8rem] font-medium text-muted bg-transparent border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:text-accent hover:border-accent disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex items-center justify-center py-[0.35rem] px-3 text-[0.8rem] font-medium text-muted bg-transparent border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:text-accent hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
   const cardClasses =
     "bg-card border border-border rounded-control p-6 mobile:p-4 mobile:rounded-card";
@@ -260,10 +260,10 @@ export default function ToolPage() {
   const raidCopyState = copyLabels.raid ?? "Copy";
 
   return (
-    <main className="w-[min(960px,calc(100%-2rem))] mobile:w-[min(calc(100%-1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8">
+    <main className="w-[min(960px,calc(100%_-_2rem))] mobile:w-[min(calc(100%_-_1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8">
       <section className="mb-8">
         <Link
-          className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase no-underline"
+          className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
           href="/"
         >
           For project managers
@@ -289,7 +289,7 @@ export default function ToolPage() {
                 handle it.
               </small>
               <textarea
-                className="w-full min-h-[320px] p-4 resize-y leading-base border border-border rounded-input bg-bg text-text font-sans transition-colors duration-150"
+                className="w-full min-h-[320px] p-4 resize-y leading-base border border-border rounded-input bg-bg text-text font-sans transition-colors duration-150 focus-visible:border-[#0d7377] focus-visible:outline-none"
                 value={transcript}
                 onChange={(event) => setTranscript(event.target.value)}
                 placeholder="Rough notes, bullet points or a transcript. Whatever came out of the meeting."
@@ -309,7 +309,7 @@ export default function ToolPage() {
                 <button
                   key={sample.id}
                   type="button"
-                  className="inline-flex items-center py-2 px-4 bg-card text-muted text-[0.8rem] font-medium border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:border-accent hover:text-accent"
+                  className="inline-flex items-center py-[0.55rem] px-4 bg-card text-muted text-[0.8rem] font-medium border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
                   onClick={() => handleSampleClick(sample.transcript)}
                 >
                   {sample.label}

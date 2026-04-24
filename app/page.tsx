@@ -10,7 +10,7 @@ const valueItems = [
 
 export default function LandingPage() {
   return (
-    <main className="w-[min(960px,calc(100%-2rem))] mobile:w-[min(calc(100%-1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8 grid gap-5">
+    <main className="w-[min(960px,calc(100%_-_2rem))] mobile:w-[min(calc(100%_-_1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8 grid gap-5">
       <section className="mb-0">
         <span className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase">
           For project managers
@@ -26,13 +26,13 @@ export default function LandingPage() {
 
         <div className="flex flex-wrap items-center gap-4 mt-6 mobile:grid mobile:grid-cols-1">
           <Link
-            className="inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 no-underline hover:bg-accent-hover"
+            className="inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 no-underline hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
             href="/app"
           >
             Generate your first update
           </Link>
           <a
-            className="text-accent font-sans font-semibold no-underline hover:underline"
+            className="text-accent font-sans font-semibold no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
             href="#example-outputs"
           >
             See a sample output
@@ -50,7 +50,7 @@ export default function LandingPage() {
       </section>
 
       <section
-        className="bg-card border border-border rounded-control p-6 mobile:p-4 grid gap-4"
+        className="bg-card border border-border rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4"
         id="example-outputs"
       >
         <h2 className="m-0 text-[1.5rem]">
@@ -68,7 +68,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-card border border-border rounded-control p-6 mobile:p-4 grid gap-4">
+      <section className="bg-card border border-border rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4">
         <h2 className="m-0 text-[1.5rem]">Not a summary. A structured update, ready to send.</h2>
         <p className="m-0 text-muted font-sans leading-relaxed">
           Rough notes go in. A structured update pack comes out, formatted the way a
@@ -77,10 +77,10 @@ export default function LandingPage() {
         </p>
       </section>
 
-      <section className="bg-card border border-border rounded-control p-6 mobile:p-4 grid gap-4">
+      <section className="bg-card border border-border rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4">
         <h2 className="m-0 text-[1.5rem]">See the difference</h2>
         <div className="grid grid-cols-2 mobile:grid-cols-1 gap-4">
-          <div className="grid gap-3 p-4 border border-border rounded-control bg-card">
+          <div className="grid gap-3 p-4 border border-border rounded-card bg-card">
             <span className="text-[0.7rem] font-bold tracking-[0.1em] uppercase text-muted font-sans">
               Input
             </span>
@@ -88,7 +88,7 @@ export default function LandingPage() {
               API integration delayed due to vendor dependency. QA team stretched. UAT planned for next week.
             </p>
           </div>
-          <div className="grid gap-3 p-4 border border-border rounded-control bg-card">
+          <div className="grid gap-3 p-4 border border-border rounded-card bg-card">
             <span className="text-[0.7rem] font-bold tracking-[0.1em] uppercase text-accent font-sans">
               Output
             </span>
@@ -102,10 +102,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-card border border-border rounded-control p-6 mobile:p-4 flex flex-col items-center text-center gap-4">
+      <section className="bg-card border border-border rounded-card p-6 mobile:p-4 mobile:rounded-card flex flex-col items-center text-center gap-4">
         <h2 className="m-0 text-[1.5rem]">One meeting. One update pack. No drafting.</h2>
         <Link
-          className="inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 no-underline hover:bg-accent-hover w-auto min-w-64"
+          className="inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 no-underline hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 w-auto min-w-64"
           href="/app"
         >
           Open Updateflow
