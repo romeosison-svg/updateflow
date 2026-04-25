@@ -10,7 +10,7 @@ module.exports = {
         accent: "#0d7377",
         "accent-hover": "#0a5f63",
         "accent-light": "#e8f4f5",
-        bg: "#f8f9fa",
+        bg: "#f0f3f6",
         card: "#ffffff",
         text: "#1a2332",
         muted: "#5c6b7a",
