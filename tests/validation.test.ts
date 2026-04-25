@@ -9,7 +9,7 @@ describe("prompt request validation", () => {
         transcript: "Some valid notes",
         outputType: "exec-summary"
       })
-    ).toBe("Output type is invalid.");
+    ).toBe("WRONG MESSAGE");
   });
 
   it("rejects empty transcripts", () => {
