@@ -4,6 +4,7 @@ type PromptBuilderParams = {
   transcript: string;
   outputType: OutputType;
   audience?: Audience;
+  lengthInstruction?: string;
 };
 
 type PromptDefinition = {
@@ -357,7 +358,8 @@ Instructions:
 export function buildGenerationPrompt({
   transcript,
   outputType,
-  audience
+  audience,
+  lengthInstruction
 }: PromptBuilderParams): string {
   const promptDefinition = getPromptDefinition(outputType, audience);
   const sanitizedTranscript = sanitiseTranscriptInput(transcript);
@@ -372,7 +374,10 @@ export function buildGenerationPrompt({
     promptDefinition.body,
     "",
     "Meeting transcript:",
-    sanitizedTranscript
+    sanitizedTranscript,
+    ...(lengthInstruction
+      ? ["", "Additional instruction:", lengthInstruction]
+      : [])
   ].join("\n");
 }
 

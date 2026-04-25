@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import type { GeneratedOutputs, OutputCardKey, RaidOutput } from "@/lib/output";
+import type { GeneratedOutputs, OutputCardKey } from "@/lib/output";
 
 const sampleTranscripts = [
   {
@@ -31,27 +31,32 @@ const sampleTranscripts = [
   }
 ] as const;
 
-const outputCards: Array<{ key: OutputCardKey; title: string }> = [
-  { key: "shortStatus", title: "Status Update" },
-  { key: "actionList", title: "Action List" }
+const outputCards: Array<{ key: Extract<OutputCardKey, "shortStatus">; title: string }> = [
+  { key: "shortStatus", title: "Weekly Update" }
 ];
 
-const optionalOutputCards: Array<{ key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate">; title: string }> = [
-  { key: "internalUpdate", title: "Internal Update" },
-  { key: "externalUpdate", title: "External Update" }
+const optionalOutputCards: Array<{
+  errorLabel: string;
+  key: Extract<OutputCardKey, "actionList" | "externalUpdate" | "internalUpdate" | "raid">;
+  title: string;
+}> = [
+  { key: "actionList", title: "Action List", errorLabel: "the action list" },
+  { key: "internalUpdate", title: "Internal Update", errorLabel: "the internal update" },
+  { key: "externalUpdate", title: "External Update", errorLabel: "the external update" },
+  { key: "raid", title: "RAID Log", errorLabel: "the RAID log" }
 ];
 
 export default function ToolPage() {
   const [transcript, setTranscript] = useState("");
   const [outputs, setOutputs] = useState<GeneratedOutputs | null>(null);
-  const [raidOutput, setRaidOutput] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isActionListLoading, setIsActionListLoading] = useState(false);
   const [isExternalLoading, setIsExternalLoading] = useState(false);
   const [isInternalLoading, setIsInternalLoading] = useState(false);
   const [isRaidLoading, setIsRaidLoading] = useState(false);
+  const [isWeeklyUpdateLoading, setIsWeeklyUpdateLoading] = useState(false);
   const [copyLabels, setCopyLabels] = useState<
-    Partial<Record<OutputCardKey | "raid", string>>
+    Partial<Record<OutputCardKey, string>>
   >({});
 
   const primaryBtn =
@@ -72,68 +77,23 @@ export default function ToolPage() {
   const outputPanelBase =
     "min-h-[260px] p-4 border border-border rounded-control bg-card";
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!transcript.trim()) {
-      setError("Paste some meeting notes or a transcript before generating.");
-      setOutputs(null);
-      setRaidOutput("");
-      return;
+  const generateWeeklyUpdate = async (
+    options?: {
+      lengthInstruction?: string;
+      resetSupplementaryOutputs?: boolean;
     }
-
-    setError("");
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          transcript
-        })
-      });
-
-      const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
-
-      if (!response.ok || !data.outputs) {
-        throw new Error(data.error ?? "Something went wrong while generating the outputs.");
-      }
-
-      setOutputs(data.outputs);
-      setRaidOutput("");
-      setCopyLabels({});
-    } catch (submitError) {
-      setOutputs(null);
-      setRaidOutput("");
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Something went wrong while generating the outputs."
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGenerateOptionalOutput = async (
-    key: "internalUpdate" | "externalUpdate",
-    errorLabel: string
   ) => {
     if (!transcript.trim()) {
-      setError(`Paste some meeting notes or a transcript before generating ${errorLabel}.`);
+      if (options?.resetSupplementaryOutputs) {
+        setOutputs(null);
+        setCopyLabels({});
+      }
+      setError("Paste some meeting notes or a transcript before generating.");
       return;
     }
 
     setError("");
-
-    if (key === "internalUpdate") {
-      setIsInternalLoading(true);
-    } else {
-      setIsExternalLoading(true);
-    }
+    setIsWeeklyUpdateLoading(true);
 
     try {
       const response = await fetch("/api/generate", {
@@ -143,9 +103,146 @@ export default function ToolPage() {
         },
         body: JSON.stringify({
           transcript,
-          includeExternal: key === "externalUpdate",
-          includeInternal: key === "internalUpdate"
+          lengthInstruction: options?.lengthInstruction
         })
+      });
+
+      const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
+
+      if (!response.ok || !data.outputs) {
+        throw new Error(data.error ?? "Something went wrong while generating the outputs.");
+      }
+
+      setOutputs((current) => {
+        const nextOutputs = options?.resetSupplementaryOutputs
+          ? {}
+          : (current ?? {});
+
+        return {
+          ...nextOutputs,
+          shortStatus: data.outputs?.shortStatus ?? ""
+        };
+      });
+      setCopyLabels((current) => ({
+        ...(options?.resetSupplementaryOutputs ? {} : current),
+        shortStatus: "Copy"
+      }));
+    } catch (generationError) {
+      if (options?.resetSupplementaryOutputs) {
+        setOutputs(null);
+      }
+      setError(
+        generationError instanceof Error
+          ? generationError.message
+          : "Something went wrong while generating the outputs."
+      );
+    } finally {
+      setIsWeeklyUpdateLoading(false);
+    }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    await generateWeeklyUpdate({
+      resetSupplementaryOutputs: true
+    });
+  };
+
+  const handleGenerateActionList = async () => {
+    if (!transcript.trim()) {
+      setError("Paste some meeting notes or a transcript before generating the action list.");
+      return;
+    }
+
+    setError("");
+    setIsActionListLoading(true);
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript,
+          outputType: "action-list"
+        })
+      });
+
+      const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
+      const value = data.outputs?.actionList;
+
+      if (!response.ok || !value) {
+        throw new Error(data.error ?? "Something went wrong while generating the action list.");
+      }
+
+      setOutputs((current) => ({
+        ...(current ?? {}),
+        actionList: value
+      }));
+      setCopyLabels((current) => ({
+        ...current,
+        actionList: "Copy"
+      }));
+    } catch (actionListError) {
+      setError(
+        actionListError instanceof Error
+          ? actionListError.message
+          : "Something went wrong while generating the action list."
+      );
+    } finally {
+      setIsActionListLoading(false);
+    }
+  };
+
+  const handleGenerateOptionalOutput = async (
+    key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate" | "raid">,
+    errorLabel: string
+  ) => {
+    if (!transcript.trim()) {
+      setError(`Paste some meeting notes or a transcript before generating ${errorLabel}.`);
+      return;
+    }
+
+    setError("");
+
+    switch (key) {
+      case "internalUpdate":
+        setIsInternalLoading(true);
+        break;
+      case "externalUpdate":
+        setIsExternalLoading(true);
+        break;
+      case "raid":
+        setIsRaidLoading(true);
+        break;
+    }
+
+    try {
+      const requestBody: {
+        transcript: string;
+        includeExternal?: boolean;
+        includeInternal?: boolean;
+        includeRaid?: boolean;
+      } = {
+        transcript
+      };
+
+      if (key === "internalUpdate") {
+        requestBody.includeInternal = true;
+      } else if (key === "externalUpdate") {
+        requestBody.includeExternal = true;
+      } else {
+        requestBody.includeRaid = true;
+      }
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
       });
 
       const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
@@ -170,54 +267,17 @@ export default function ToolPage() {
           : `Something went wrong while generating ${errorLabel}.`
       );
     } finally {
-      if (key === "internalUpdate") {
-        setIsInternalLoading(false);
-      } else {
-        setIsExternalLoading(false);
+      switch (key) {
+        case "internalUpdate":
+          setIsInternalLoading(false);
+          break;
+        case "externalUpdate":
+          setIsExternalLoading(false);
+          break;
+        case "raid":
+          setIsRaidLoading(false);
+          break;
       }
-    }
-  };
-
-  const handleGenerateRaid = async () => {
-    if (!transcript.trim()) {
-      setError("Paste some meeting notes or a transcript before generating RAID.");
-      return;
-    }
-
-    setError("");
-    setIsRaidLoading(true);
-
-    try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          transcript,
-          includeRaid: true
-        })
-      });
-
-      const data = (await response.json()) as { outputs?: RaidOutput; error?: string };
-
-      if (!response.ok || !data.outputs?.raid) {
-        throw new Error(data.error ?? "Something went wrong while generating the RAID output.");
-      }
-
-      setRaidOutput(data.outputs.raid);
-      setCopyLabels((current) => ({
-        ...current,
-        raid: "Copy"
-      }));
-    } catch (raidError) {
-      setError(
-        raidError instanceof Error
-          ? raidError.message
-          : "Something went wrong while generating the RAID output."
-      );
-    } finally {
-      setIsRaidLoading(false);
     }
   };
 
@@ -226,7 +286,7 @@ export default function ToolPage() {
     setError("");
   };
 
-  const handleCopy = async (key: OutputCardKey | "raid", value: string) => {
+  const handleCopy = async (key: OutputCardKey, value: string) => {
     if (!value) {
       return;
     }
@@ -257,8 +317,6 @@ export default function ToolPage() {
     }
   };
 
-  const raidCopyState = copyLabels.raid ?? "Copy";
-
   return (
     <main className="w-[min(960px,calc(100%_-_2rem))] mobile:w-[min(calc(100%_-_1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8">
       <section className="hero mb-6">
@@ -269,11 +327,10 @@ export default function ToolPage() {
           For project managers
         </Link>
         <h1 className="m-0 max-w-[12ch] mobile:max-w-none text-[clamp(2.5rem,6vw,4.5rem)] leading-tight text-text font-bold">
-          Paste your notes. Get your update pack.
+          Paste your notes. Get your weekly update.
         </h1>
         <p className="mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
-          Paste rough notes, generate the full update pack, then refine what needs your
-          judgement.
+          Paste rough notes, get your weekly update in seconds, then add what you need.
         </p>
       </section>
 
@@ -292,7 +349,7 @@ export default function ToolPage() {
                 className="w-full min-h-[320px] p-4 resize-y leading-base border border-border rounded-input bg-bg text-text font-sans transition-colors duration-150 focus-visible:border-[#0d7377] focus-visible:outline-none"
                 value={transcript}
                 onChange={(event) => setTranscript(event.target.value)}
-                placeholder="Rough notes, bullet points or a transcript. Whatever came out of the meeting."
+                placeholder="Paste your notes from this week — rough bullets, Copilot summaries, or anything from the meeting."
                 rows={14}
               />
             </label>
@@ -322,8 +379,8 @@ export default function ToolPage() {
             </p>
 
             <div className="flex flex-wrap items-center gap-y-3 gap-x-4">
-              <button className={primaryBtn} type="submit" disabled={isLoading}>
-                {isLoading ? "Turning notes into updates..." : "Generate update pack"}
+              <button className={primaryBtn} type="submit" disabled={isWeeklyUpdateLoading}>
+                {isWeeklyUpdateLoading ? "Generating weekly update..." : "Generate weekly update"}
               </button>
               {error && <p className="m-0 text-error text-[0.88rem] font-sans">{error}</p>}
             </div>
@@ -347,17 +404,17 @@ export default function ToolPage() {
                     onClick={() => handleCopy(card.key, value)}
                     disabled={!value}
                   >
-                    {copyState}
-                    <span aria-live="polite" className="sr-only">
+                  {copyState}
+                  <span aria-live="polite" className="sr-only">
                       {copyState === "Copied" ? "Copied to clipboard" : ""}
                     </span>
                   </button>
                 </div>
 
                 <div className={`${outputPanelBase}${!value ? " grid place-items-center" : ""}`}>
-                  {isLoading ? (
+                  {isWeeklyUpdateLoading ? (
                     <p className="m-0 text-muted text-base font-sans animate-pulse-opacity">
-                      Turning notes into updates...
+                      Generating weekly update...
                     </p>
                   ) : value ? (
                     <pre className="m-0 whitespace-pre-wrap break-words text-base font-sans leading-base">
@@ -365,12 +422,41 @@ export default function ToolPage() {
                     </pre>
                   ) : (
                     <p className="m-0 text-muted text-base font-sans">
-                      {card.key === "shortStatus"
-                        ? "Your 2-3 sentence delivery summary will appear here."
-                        : "Actions with owners and priorities will appear here."}
+                      Your 2-3 sentence weekly update will appear here.
                     </p>
                   )}
                 </div>
+
+                {value && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={copyBtn}
+                      onClick={() =>
+                        generateWeeklyUpdate({
+                          lengthInstruction:
+                            "Make the output shorter. Aim for 1-2 tight sentences maximum."
+                        })
+                      }
+                      disabled={isWeeklyUpdateLoading}
+                    >
+                      Shorter
+                    </button>
+                    <button
+                      type="button"
+                      className={copyBtn}
+                      onClick={() =>
+                        generateWeeklyUpdate({
+                          lengthInstruction:
+                            "Expand the output slightly. Aim for 3-4 sentences. Add more specific delivery context where it is clearly supported by the input."
+                        })
+                      }
+                      disabled={isWeeklyUpdateLoading}
+                    >
+                      More detail
+                    </button>
+                  </div>
+                )}
               </section>
             );
           })}
@@ -380,37 +466,54 @@ export default function ToolPage() {
               Add to your pack
             </p>
             <div className="flex justify-start flex-wrap gap-3">
-              <button
-                type="button"
-                className={`${secondaryBtn} mobile:w-full`}
-                onClick={() => handleGenerateOptionalOutput("internalUpdate", "the internal update")}
-                disabled={isLoading || isInternalLoading}
-              >
-                {isInternalLoading ? "Generating Internal Update..." : "Internal Update"}
-              </button>
-              <button
-                type="button"
-                className={`${secondaryBtn} mobile:w-full`}
-                onClick={() => handleGenerateOptionalOutput("externalUpdate", "the external update")}
-                disabled={isLoading || isExternalLoading}
-              >
-                {isExternalLoading ? "Generating External Update..." : "External Update"}
-              </button>
-              <button
-                type="button"
-                className={`${secondaryBtn} mobile:w-full`}
-                onClick={handleGenerateRaid}
-                disabled={isLoading || isRaidLoading}
-              >
-                {isRaidLoading ? "Generating RAID..." : "RAID Log"}
-              </button>
+              {optionalOutputCards.map((card) => {
+                const isLoading =
+                  card.key === "actionList"
+                    ? isActionListLoading
+                    : card.key === "internalUpdate"
+                      ? isInternalLoading
+                      : card.key === "externalUpdate"
+                        ? isExternalLoading
+                        : isRaidLoading;
+
+                const loadingLabel =
+                  card.key === "actionList"
+                    ? "Generating Action List..."
+                    : card.key === "internalUpdate"
+                      ? "Generating Internal Update..."
+                      : card.key === "externalUpdate"
+                        ? "Generating External Update..."
+                        : "Generating RAID...";
+
+                return (
+                  <button
+                    key={card.key}
+                    type="button"
+                    className={`${secondaryBtn} mobile:w-full`}
+                    onClick={() =>
+                      card.key === "actionList"
+                        ? handleGenerateActionList()
+                        : handleGenerateOptionalOutput(card.key, card.errorLabel)
+                    }
+                    disabled={isWeeklyUpdateLoading || isLoading}
+                  >
+                    {isLoading ? loadingLabel : card.title}
+                  </button>
+                );
+              })}
             </div>
           </section>
 
           {optionalOutputCards.map((card) => {
             const value = outputs?.[card.key] ?? "";
             const isCardLoading =
-              card.key === "internalUpdate" ? isInternalLoading : isExternalLoading;
+              card.key === "actionList"
+                ? isActionListLoading
+                : card.key === "internalUpdate"
+                  ? isInternalLoading
+                  : card.key === "externalUpdate"
+                    ? isExternalLoading
+                    : isRaidLoading;
             const copyState = copyLabels[card.key] ?? "Copy";
 
             if (!isCardLoading && !value) {
@@ -439,9 +542,13 @@ export default function ToolPage() {
                 <div className={`${outputPanelBase}${!value ? " grid place-items-center" : ""}`}>
                   {isCardLoading ? (
                     <p className="m-0 text-muted text-base font-sans animate-pulse-opacity">
-                      {card.key === "internalUpdate"
-                        ? "Generating Internal Update..."
-                        : "Generating External Update..."}
+                      {card.key === "actionList"
+                        ? "Generating Action List..."
+                        : card.key === "internalUpdate"
+                          ? "Generating Internal Update..."
+                          : card.key === "externalUpdate"
+                            ? "Generating External Update..."
+                            : "Generating RAID..."}
                     </p>
                   ) : value ? (
                     <pre className="m-0 whitespace-pre-wrap break-words text-base font-sans leading-base">
@@ -449,52 +556,19 @@ export default function ToolPage() {
                     </pre>
                   ) : (
                     <p className="m-0 text-muted text-base font-sans">
-                      {card.key === "internalUpdate"
+                      {card.key === "actionList"
+                        ? "Actions with owners and priorities will appear here."
+                        : card.key === "internalUpdate"
                         ? "Your internal team update will appear here."
-                        : "Your stakeholder-facing update will appear here."}
+                        : card.key === "externalUpdate"
+                          ? "Your stakeholder-facing update will appear here."
+                          : "Risks, assumptions, issues, and dependencies will appear here."}
                     </p>
                   )}
                 </div>
               </section>
             );
           })}
-
-          {(isRaidLoading || raidOutput) && (
-            <section className={`${cardClasses} grid gap-4`}>
-              <div className={outputHeaderClasses}>
-                <div>
-                  <h2 className="m-0 text-2xl font-semibold">RAID</h2>
-                </div>
-                <button
-                  type="button"
-                  className={copyBtn}
-                  onClick={() => handleCopy("raid", raidOutput)}
-                  disabled={!raidOutput}
-                >
-                  {raidCopyState}
-                  <span aria-live="polite" className="sr-only">
-                    {raidCopyState === "Copied" ? "Copied to clipboard" : ""}
-                  </span>
-                </button>
-              </div>
-
-              <div className={`${outputPanelBase}${!raidOutput ? " grid place-items-center" : ""}`}>
-                {isRaidLoading ? (
-                  <p className="m-0 text-muted text-base font-sans animate-pulse-opacity">
-                    Generating RAID...
-                  </p>
-                ) : raidOutput ? (
-                  <pre className="m-0 whitespace-pre-wrap break-words text-base font-sans leading-base">
-                    {raidOutput}
-                  </pre>
-                ) : (
-                  <p className="m-0 text-muted text-base font-sans">
-                    Risks, assumptions, issues, and dependencies will appear here.
-                  </p>
-                )}
-              </div>
-            </section>
-          )}
         </section>
       </div>
     </main>
