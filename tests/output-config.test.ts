@@ -7,23 +7,23 @@ import {
 } from "../lib/output";
 
 describe("output configuration", () => {
-  it("keeps the default outputs limited to Status Update and Action List", () => {
+  it("keeps the default outputs limited to Weekly Update", () => {
     expect(DEFAULT_OUTPUT_CONFIG).toEqual([
       {
         key: "shortStatus",
         outputType: "short-status-update",
-        title: "Status Update"
-      },
-      {
-        key: "actionList",
-        outputType: "action-list",
-        title: "Action List"
+        title: "Weekly Update"
       }
     ]);
   });
 
-  it("keeps Internal Stakeholder Update, External Stakeholder Update, and RAID as optional outputs", () => {
+  it("keeps Action List, Internal Stakeholder Update, External Stakeholder Update, and RAID as optional outputs", () => {
     expect(OPTIONAL_OUTPUT_CONFIG).toEqual([
+      {
+        key: "actionList",
+        outputType: "action-list",
+        title: "Action List"
+      },
       {
         key: "internalUpdate",
         outputType: "stakeholder-update",

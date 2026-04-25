@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { generateText } from "@/lib/generate";
-import type { GeneratedOutputs, RaidOutput } from "@/lib/output";
+import type { GeneratedOutputs } from "@/lib/output";
 
 const MAX_TRANSCRIPT_LENGTH = 25000;
 
 export async function POST(request: Request) {
   let body: {
+    includeActionList?: boolean;
     includeExternal?: boolean;
     includeInternal?: boolean;
     includeRaid?: boolean;
+    lengthInstruction?: string;
+    outputType?: string;
     transcript?: string;
   };
 
@@ -26,9 +29,12 @@ export async function POST(request: Request) {
 
     try {
       body = (await request.json()) as {
+        includeActionList?: boolean;
         includeExternal?: boolean;
         includeInternal?: boolean;
         includeRaid?: boolean;
+        lengthInstruction?: string;
+        outputType?: string;
         transcript?: string;
       };
     } catch {
@@ -41,9 +47,15 @@ export async function POST(request: Request) {
     }
 
     const transcript = body.transcript?.trim() ?? "";
+    const includeActionList = body.includeActionList === true;
     const includeExternal = body.includeExternal === true;
     const includeInternal = body.includeInternal === true;
     const includeRaid = body.includeRaid === true;
+    const lengthInstruction = body.lengthInstruction?.trim();
+    const outputType = body.outputType?.trim();
+    const transcriptWithLengthInstruction = lengthInstruction
+      ? `${transcript}\n\nAdditional instruction: ${lengthInstruction}`
+      : transcript;
 
     if (!transcript) {
       return NextResponse.json(
@@ -69,8 +81,23 @@ export async function POST(request: Request) {
         outputType: "raid-log"
       });
 
-      const outputs: RaidOutput = {
+      const outputs: GeneratedOutputs = {
         raid
+      };
+
+      return NextResponse.json({
+        outputs
+      });
+    }
+
+    if (includeActionList || outputType === "action-list") {
+      const actionList = await generateText({
+        transcript,
+        outputType: "action-list"
+      });
+
+      const outputs: GeneratedOutputs = {
+        actionList
       };
 
       return NextResponse.json({
@@ -110,20 +137,13 @@ export async function POST(request: Request) {
       });
     }
 
-    const [shortStatus, actionList] = await Promise.all([
-      generateText({
-        transcript,
-        outputType: "short-status-update"
-      }),
-      generateText({
-        transcript,
-        outputType: "action-list"
-      })
-    ]);
+    const shortStatus = await generateText({
+      transcript: transcriptWithLengthInstruction,
+      outputType: "short-status-update"
+    });
 
     const outputs: GeneratedOutputs = {
-      shortStatus,
-      actionList
+      shortStatus
     };
 
     return NextResponse.json({

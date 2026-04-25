@@ -15,16 +15,16 @@ export const DEFAULT_OUTPUT_CONFIG = [
   {
     key: "shortStatus",
     outputType: "short-status-update",
-    title: "Status Update"
-  },
-  {
-    key: "actionList",
-    outputType: "action-list",
-    title: "Action List"
+    title: "Weekly Update"
   }
 ] as const;
 
 export const OPTIONAL_OUTPUT_CONFIG = [
+  {
+    key: "actionList",
+    outputType: "action-list",
+    title: "Action List"
+  },
   {
     key: "internalUpdate",
     outputType: "stakeholder-update",
@@ -52,10 +52,6 @@ export type OutputCardKey =
   | "raid";
 
 export type GeneratedOutputs = Partial<Record<OutputCardKey, string>>;
-
-export type RaidOutput = {
-  raid: string;
-};
 
 type PromptValidationInput = {
   audience?: string;

@@ -11,7 +11,7 @@ const valueItems = [
 export default function LandingPage() {
   return (
     <main className="w-[min(960px,calc(100%_-_2rem))] mobile:w-[min(calc(100%_-_1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8 grid gap-5">
-      <section className="mb-0">
+      <section className="hero mb-0">
         <span className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase font-sans">
           For project managers
         </span>
@@ -26,7 +26,7 @@ export default function LandingPage() {
 
         <div className="flex flex-wrap items-center gap-4 mt-6 mobile:grid mobile:grid-cols-1">
           <Link
-            className="inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 no-underline hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
+            className="inline-flex items-center justify-center py-3 px-6 bg-gradient-to-b from-[#0f8080] to-[#0a5f63] text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors transition-shadow duration-200 no-underline shadow-[0_2px_6px_rgba(13,115,119,0.35)] hover:bg-accent-hover hover:shadow-[0_4px_12px_rgba(13,115,119,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
             href="/app"
           >
             Write my weekly update
@@ -51,7 +51,7 @@ export default function LandingPage() {
       </section>
 
       <section
-        className="bg-card border border-border rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4"
+        className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200"
         id="example-outputs"
       >
         <h2 className="m-0 text-2xl font-semibold">
@@ -69,7 +69,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-card border border-border rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4">
+      <section className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200">
         <h2 className="m-0 text-2xl font-semibold">Not a summary. A structured update, written the way a PM would write it.</h2>
         <p className="m-0 text-muted font-sans text-base leading-relaxed">
           Rough notes go in. A clear, professional weekly update comes out —
@@ -78,7 +78,7 @@ export default function LandingPage() {
         </p>
       </section>
 
-      <section className="bg-card border border-border rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4">
+      <section className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200">
         <h2 className="m-0 text-2xl font-semibold">See the difference</h2>
         <div className="grid grid-cols-2 mobile:grid-cols-1 gap-4">
           <div className="grid gap-3 p-4 border border-border rounded-card bg-card">
@@ -103,10 +103,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-card border border-border rounded-card p-6 mobile:p-4 mobile:rounded-card flex flex-col items-center text-center gap-4">
+      <section className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card flex flex-col items-center text-center gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200">
         <h2 className="m-0 text-2xl font-semibold">One set of notes. Your full update, ready in seconds.</h2>
         <Link
-          className="inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 no-underline hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 w-auto min-w-64"
+          className="inline-flex items-center justify-center py-3 px-6 bg-gradient-to-b from-[#0f8080] to-[#0a5f63] text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors transition-shadow duration-200 no-underline shadow-[0_2px_6px_rgba(13,115,119,0.35)] hover:bg-accent-hover hover:shadow-[0_4px_12px_rgba(13,115,119,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 w-auto min-w-64"
           href="/app"
         >
           Open Updateflow
