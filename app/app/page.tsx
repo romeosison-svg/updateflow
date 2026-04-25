@@ -349,7 +349,7 @@ export default function ToolPage() {
                 className="w-full min-h-[320px] p-4 resize-y leading-base border border-border rounded-input bg-bg text-text font-sans transition-colors duration-150 focus-visible:border-[#0d7377] focus-visible:outline-none"
                 value={transcript}
                 onChange={(event) => setTranscript(event.target.value)}
-                placeholder="Paste your notes from this week — rough bullets, Copilot summaries, or anything from the meeting."
+                placeholder="Paste your notes from this week: rough bullets, Copilot or Zoom summaries, Teams notes, or anything from the meeting."
                 rows={14}
               />
             </label>
