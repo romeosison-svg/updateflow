@@ -285,7 +285,7 @@ export default function ToolPage() {
                 Meeting notes or transcript
               </span>
               <small className="text-muted font-sans text-[0.88rem] leading-base">
-                Works best with sanitised notes or paste freely and let the output
+                Works best with sanitised notes, or paste freely and let the output
                 handle it.
               </small>
               <textarea
