@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const valueItems = [
-  "Status update - ready to send",
-  "Action list with clear ownership and priority",
-  "External stakeholder update",
+  "Weekly update, ready to send",
+  "Action list with owners and priorities",
   "Internal team update",
+  "External stakeholder update",
   "RAID log, generated on demand"
 ] as const;
 
@@ -16,12 +16,12 @@ export default function LandingPage() {
           For project managers
         </span>
         <h1 className="m-0 max-w-[12ch] mobile:max-w-none text-[clamp(2.5rem,6vw,4.5rem)] leading-tight text-text font-bold">
-          From meeting notes to a full update pack in seconds.
+          Your weekly update, written in seconds.
         </h1>
         <p className="mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
-          Paste rough notes from any meeting. Get a complete update pack (status
-          update, action list, stakeholder brief, and RAID log) so you can focus on
-          judgement, not drafting.
+          Paste your notes from this week. Get a clear, send-ready weekly update
+          instantly. Then add what you need — action list, stakeholder updates,
+          RAID log — all from the same notes.
         </p>
 
         <div className="flex flex-wrap items-center gap-4 mt-6 mobile:grid mobile:grid-cols-1">
@@ -29,7 +29,7 @@ export default function LandingPage() {
             className="inline-flex items-center justify-center py-3 px-6 bg-gradient-to-b from-[#0f8080] to-[#0a5f63] text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors transition-shadow duration-200 no-underline shadow-[0_2px_6px_rgba(13,115,119,0.35)] hover:bg-accent-hover hover:shadow-[0_4px_12px_rgba(13,115,119,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
             href="/app"
           >
-            Generate your first update
+            Write my weekly update
           </Link>
           <a
             className="text-accent font-sans font-semibold text-[0.9rem] no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
@@ -40,7 +40,8 @@ export default function LandingPage() {
         </div>
 
         <p className="mt-4 text-muted font-sans text-[0.88rem] leading-base">
-          Works with any notes, Copilot summaries, Zoom transcripts, or ChatGPT output.
+          Works with rough notes, Copilot summaries, Zoom transcripts, or anything
+          from the meeting.
         </p>
 
         <p className="mt-5 text-muted font-sans text-[0.88rem] leading-relaxed">
@@ -54,7 +55,7 @@ export default function LandingPage() {
         id="example-outputs"
       >
         <h2 className="m-0 text-2xl font-semibold">
-          After every meeting, you leave with a complete update pack, ready to review and send.
+          One set of notes. Everything you need to communicate this week.
         </h2>
         <div className="grid grid-cols-2 mobile:grid-cols-1 gap-4">
           {valueItems.map((item) => (
@@ -69,11 +70,11 @@ export default function LandingPage() {
       </section>
 
       <section className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200">
-        <h2 className="m-0 text-2xl font-semibold">Not a summary. A structured update, ready to send.</h2>
+        <h2 className="m-0 text-2xl font-semibold">Not a summary. A structured update, written the way a PM would write it.</h2>
         <p className="m-0 text-muted font-sans text-base leading-relaxed">
-          Rough notes go in. A structured update pack comes out, formatted the way a
-          delivery-focused PM would write it, with the right sections, the right tone,
-          and the right level of detail for each audience.
+          Rough notes go in. A clear, professional weekly update comes out —
+          formatted the way a delivery-focused PM would write it. Add stakeholder
+          updates, actions, and RAID on demand from the same input.
         </p>
       </section>
 
@@ -103,7 +104,7 @@ export default function LandingPage() {
       </section>
 
       <section className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card flex flex-col items-center text-center gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200">
-        <h2 className="m-0 text-2xl font-semibold">One meeting. One update pack. No drafting.</h2>
+        <h2 className="m-0 text-2xl font-semibold">One set of notes. Your full update, ready in seconds.</h2>
         <Link
           className="inline-flex items-center justify-center py-3 px-6 bg-gradient-to-b from-[#0f8080] to-[#0a5f63] text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors transition-shadow duration-200 no-underline shadow-[0_2px_6px_rgba(13,115,119,0.35)] hover:bg-accent-hover hover:shadow-[0_4px_12px_rgba(13,115,119,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 w-auto min-w-64"
           href="/app"
