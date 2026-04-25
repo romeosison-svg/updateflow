@@ -60,7 +60,7 @@ export default function ToolPage() {
   >({});
 
   const primaryBtn =
-    "inline-flex items-center justify-center py-3 px-6 bg-accent text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors duration-150 enabled:hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex items-center justify-center py-3 px-6 bg-gradient-to-b from-[#0f8080] to-[#0a5f63] text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors transition-shadow duration-200 shadow-[0_2px_6px_rgba(13,115,119,0.35)] enabled:hover:bg-accent-hover enabled:hover:shadow-[0_4px_12px_rgba(13,115,119,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
   const secondaryBtn =
     "inline-flex items-center justify-center py-3 px-5 bg-transparent text-accent text-[0.9rem] font-medium tracking-[0.01em] border-[1.5px] border-accent rounded-input font-sans cursor-pointer transition-colors duration-150 enabled:hover:bg-accent-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
@@ -69,7 +69,7 @@ export default function ToolPage() {
     "inline-flex items-center justify-center py-[0.35rem] px-3 text-[0.8rem] font-medium text-muted bg-transparent border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:text-accent hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
   const cardClasses =
-    "bg-card border border-border rounded-control p-6 mobile:p-4 mobile:rounded-card";
+    "bg-card border border-border rounded-control p-6 mobile:p-4 mobile:rounded-card shadow-[0_2px_8px_rgba(0,0,0,0.06)]";
 
   const outputHeaderClasses =
     "flex items-center justify-between gap-4 pb-3 border-b border-border mb-4 mobile:grid mobile:grid-cols-1";
@@ -319,7 +319,7 @@ export default function ToolPage() {
 
   return (
     <main className="w-[min(960px,calc(100%_-_2rem))] mobile:w-[min(calc(100%_-_1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8">
-      <section className="mb-8">
+      <section className="hero mb-6">
         <Link
           className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase font-sans no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
           href="/"
@@ -335,7 +335,7 @@ export default function ToolPage() {
       </section>
 
       <div className="grid gap-5">
-        <section className={cardClasses}>
+        <section className={`${cardClasses} hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200`}>
           <form className="grid gap-3" onSubmit={handleSubmit}>
             <label className="grid gap-[0.55rem]">
               <span className="font-sans text-[0.95rem] font-semibold">
