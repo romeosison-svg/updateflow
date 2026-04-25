@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     includeInternal?: boolean;
     includeRaid?: boolean;
     lengthInstruction?: string;
+    outputType?: string;
     transcript?: string;
   };
 
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
         includeInternal?: boolean;
         includeRaid?: boolean;
         lengthInstruction?: string;
+        outputType?: string;
         transcript?: string;
       };
     } catch {
@@ -50,6 +52,7 @@ export async function POST(request: Request) {
     const includeInternal = body.includeInternal === true;
     const includeRaid = body.includeRaid === true;
     const lengthInstruction = body.lengthInstruction?.trim();
+    const outputType = body.outputType?.trim();
     const transcriptWithLengthInstruction = lengthInstruction
       ? `${transcript}\n\nAdditional instruction: ${lengthInstruction}`
       : transcript;
@@ -87,7 +90,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (includeActionList) {
+    if (includeActionList || outputType === "action-list") {
       const actionList = await generateText({
         transcript,
         outputType: "action-list"

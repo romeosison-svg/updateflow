@@ -372,12 +372,12 @@ export function buildGenerationPrompt({
     STYLE_LAYER,
     "",
     promptDefinition.body,
-    ...(lengthInstruction
-      ? ["", "Additional instruction:", lengthInstruction]
-      : []),
     "",
     "Meeting transcript:",
-    sanitizedTranscript
+    sanitizedTranscript,
+    ...(lengthInstruction
+      ? ["", "Additional instruction:", lengthInstruction]
+      : [])
   ].join("\n");
 }
 

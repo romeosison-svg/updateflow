@@ -149,8 +149,55 @@ export default function ToolPage() {
     });
   };
 
+  const handleGenerateActionList = async () => {
+    if (!transcript.trim()) {
+      setError("Paste some meeting notes or a transcript before generating the action list.");
+      return;
+    }
+
+    setError("");
+    setIsActionListLoading(true);
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript,
+          outputType: "action-list"
+        })
+      });
+
+      const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
+      const value = data.outputs?.actionList;
+
+      if (!response.ok || !value) {
+        throw new Error(data.error ?? "Something went wrong while generating the action list.");
+      }
+
+      setOutputs((current) => ({
+        ...(current ?? {}),
+        actionList: value
+      }));
+      setCopyLabels((current) => ({
+        ...current,
+        actionList: "Copy"
+      }));
+    } catch (actionListError) {
+      setError(
+        actionListError instanceof Error
+          ? actionListError.message
+          : "Something went wrong while generating the action list."
+      );
+    } finally {
+      setIsActionListLoading(false);
+    }
+  };
+
   const handleGenerateOptionalOutput = async (
-    key: Extract<OutputCardKey, "actionList" | "externalUpdate" | "internalUpdate" | "raid">,
+    key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate" | "raid">,
     errorLabel: string
   ) => {
     if (!transcript.trim()) {
@@ -161,9 +208,6 @@ export default function ToolPage() {
     setError("");
 
     switch (key) {
-      case "actionList":
-        setIsActionListLoading(true);
-        break;
       case "internalUpdate":
         setIsInternalLoading(true);
         break;
@@ -178,7 +222,6 @@ export default function ToolPage() {
     try {
       const requestBody: {
         transcript: string;
-        includeActionList?: boolean;
         includeExternal?: boolean;
         includeInternal?: boolean;
         includeRaid?: boolean;
@@ -186,9 +229,7 @@ export default function ToolPage() {
         transcript
       };
 
-      if (key === "actionList") {
-        requestBody.includeActionList = true;
-      } else if (key === "internalUpdate") {
+      if (key === "internalUpdate") {
         requestBody.includeInternal = true;
       } else if (key === "externalUpdate") {
         requestBody.includeExternal = true;
@@ -227,9 +268,6 @@ export default function ToolPage() {
       );
     } finally {
       switch (key) {
-        case "actionList":
-          setIsActionListLoading(false);
-          break;
         case "internalUpdate":
           setIsInternalLoading(false);
           break;
@@ -452,7 +490,11 @@ export default function ToolPage() {
                     key={card.key}
                     type="button"
                     className={`${secondaryBtn} mobile:w-full`}
-                    onClick={() => handleGenerateOptionalOutput(card.key, card.errorLabel)}
+                    onClick={() =>
+                      card.key === "actionList"
+                        ? handleGenerateActionList()
+                        : handleGenerateOptionalOutput(card.key, card.errorLabel)
+                    }
                     disabled={isWeeklyUpdateLoading || isLoading}
                   >
                     {isLoading ? loadingLabel : card.title}
