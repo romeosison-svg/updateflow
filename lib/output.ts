@@ -48,7 +48,8 @@ export type OutputCardKey =
   | "internalUpdate"
   | "externalUpdate"
   | "shortStatus"
-  | "actionList";
+  | "actionList"
+  | "raid";
 
 export type GeneratedOutputs = Partial<Record<OutputCardKey, string>>;
 
