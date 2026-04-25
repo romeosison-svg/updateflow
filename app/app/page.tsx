@@ -6,28 +6,28 @@ import type { GeneratedOutputs, OutputCardKey } from "@/lib/output";
 
 const sampleTranscripts = [
   {
+    id: "migration-week",
+    label: "migration week",
+    transcript:
+      "Monday: Confirmed cutover window with infrastructure team for Saturday night. Vendor yet to provide final environment sign-off.\n\nTuesday: Sign-off still outstanding. Escalated to vendor account manager. Parallel workstream leads asked to review dependencies ahead of cutover.\n\nWednesday: Vendor confirmed environment ready. UAT entry criteria reviewed with QA lead — two outstanding defects flagged as potential blockers. Decision to defer lower-priority defect and proceed with UAT.\n\nThursday: UAT started. First round of test cases passed. One defect raised against the reporting module — under investigation. Client stakeholder briefed on status.\n\nFriday: UAT progressing. Reporting defect confirmed as low severity and deferred to post-go-live. Cutover plan confirmed for Saturday. Communications drafted and ready to send."
+  },
+  {
+    id: "programme-update",
+    label: "programme update",
+    transcript:
+      "Monday: Kick-off for new workstream completed. Three work packages assigned to stream leads. Resource gap identified in data migration track — flagged to PMO.\n\nTuesday: Data migration resource confirmed for two days per week. Dependencies mapped across all three workstreams. Risk log updated.\n\nWednesday: Steering group prep completed. Deck reviewed with sponsor. Two decisions required from steering: budget approval for additional QA resource and sign-off on revised go-live date.\n\nThursday: Steering group held. Budget approved. Go-live date moved to end of next month — agreed by all parties. Stream leads notified and plans being updated.\n\nFriday: Updated programme plan circulated. One stream lead flagged a risk around third-party API readiness. Added to RAID. Next week focus is confirming integration test schedule."
+  },
+  {
     id: "delivery-risk",
     label: "delivery risk",
     transcript:
-      "Migration testing is behind plan after the vendor environment was delivered late. The Project Manager flagged a risk that UAT could slip by one week unless test data is approved by Friday. The client stakeholder agreed to review the blocker and the engineering lead will confirm the revised cutover approach tomorrow."
+      "- API integration delayed — vendor missed agreed delivery date\n- QA resource stretched across two workstreams this sprint\n- UAT entry criteria not yet signed off by client\n- Risk to UAT start date if API not delivered by Wednesday\n- PM to confirm revised timeline with vendor tomorrow"
   },
   {
-    id: "stakeholder-update",
-    label: "stakeholder update",
+    id: "action-heavy-week",
+    label: "action-heavy week",
     transcript:
-      "This week the team completed the reporting dashboard build and finished finance sign-off on the new workflow. A dependency remains on the client security team to approve SSO changes. No current delivery issue was raised, but there is a risk to timeline if approval moves past next Wednesday. Next week the team will begin pilot onboarding and prepare the go-live checklist."
-  },
-  {
-    id: "action-heavy",
-    label: "action-heavy meeting",
-    transcript:
-      "Sarah will send the RAID log update by end of day. Tom to confirm resource availability for the integration workstream. Client to provide final API documentation before Tuesday. The team agreed to review open defects on Thursday and decide whether to defer two lower-priority items from release scope."
-  },
-  {
-    id: "sanitised-client-notes",
-    label: "sanitised client notes",
-    transcript:
-      "Client stakeholder raised concern about readiness of reporting dashboard ahead of UAT. API integration remains dependent on external vendor delivery. Project Manager to confirm revised timeline and communicate impact."
+      "- Sarah to send updated RAID log by end of day Friday\n- Tom to confirm resource availability for integration workstream next week\n- Client to provide final sign-off on UAT test cases before Thursday\n- Team agreed to defer two lower-priority defects from release scope\n- Go-live readiness review scheduled for next Monday at 10am\n- Dependency on client security team for SSO approval still outstanding"
   }
 ] as const;
 
@@ -373,10 +373,6 @@ export default function ToolPage() {
                 </button>
               ))}
             </div>
-
-            <p className="m-0 text-muted font-sans text-[0.88rem] leading-base">
-              Sensitive names and details will be anonymised in the output.
-            </p>
 
             <div className="flex flex-wrap items-center gap-y-3 gap-x-4">
               <button className={primaryBtn} type="submit" disabled={isWeeklyUpdateLoading}>
