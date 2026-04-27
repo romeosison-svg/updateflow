@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { usePostHog } from "posthog-js/react";
 import type { GeneratedOutputs, OutputCardKey } from "@/lib/output";
 
 const sampleTranscripts = [
@@ -47,6 +48,7 @@ const optionalOutputCards: Array<{
 ];
 
 export default function ToolPage() {
+  const posthog = usePostHog();
   const [transcript, setTranscript] = useState("");
   const [outputs, setOutputs] = useState<GeneratedOutputs | null>(null);
   const [error, setError] = useState("");
@@ -79,6 +81,7 @@ export default function ToolPage() {
 
   const generateWeeklyUpdate = async (
     options?: {
+      captureGenerateEvent?: boolean;
       lengthInstruction?: string;
       resetSupplementaryOutputs?: boolean;
     }
@@ -127,6 +130,10 @@ export default function ToolPage() {
         ...(options?.resetSupplementaryOutputs ? {} : current),
         shortStatus: "Copy"
       }));
+
+      if (options?.captureGenerateEvent) {
+        posthog?.capture("generate_weekly_update");
+      }
     } catch (generationError) {
       if (options?.resetSupplementaryOutputs) {
         setOutputs(null);
@@ -145,6 +152,7 @@ export default function ToolPage() {
     event.preventDefault();
 
     await generateWeeklyUpdate({
+      captureGenerateEvent: true,
       resetSupplementaryOutputs: true
     });
   };
@@ -157,6 +165,7 @@ export default function ToolPage() {
 
     setError("");
     setIsActionListLoading(true);
+    posthog?.capture("add_to_pack_clicked", { type: "action_list" });
 
     try {
       const response = await fetch("/api/generate", {
@@ -185,6 +194,7 @@ export default function ToolPage() {
         ...current,
         actionList: "Copy"
       }));
+
     } catch (actionListError) {
       setError(
         actionListError instanceof Error
@@ -206,6 +216,14 @@ export default function ToolPage() {
     }
 
     setError("");
+    posthog?.capture("add_to_pack_clicked", {
+      type:
+        key === "internalUpdate"
+          ? "internal_update"
+          : key === "externalUpdate"
+            ? "external_update"
+            : "raid_log"
+    });
 
     switch (key) {
       case "internalUpdate":
@@ -260,6 +278,7 @@ export default function ToolPage() {
         ...current,
         [key]: "Copy"
       }));
+
     } catch (optionalError) {
       setError(
         optionalError instanceof Error
@@ -293,6 +312,20 @@ export default function ToolPage() {
 
     try {
       await navigator.clipboard.writeText(value);
+
+      posthog?.capture("output_copied", {
+        output:
+          key === "shortStatus"
+            ? "weekly_update"
+            : key === "actionList"
+              ? "action_list"
+              : key === "internalUpdate"
+                ? "internal_update"
+                : key === "externalUpdate"
+                  ? "external_update"
+                  : "raid_log"
+      });
+
       setCopyLabels((current) => ({
         ...current,
         [key]: "Copied"
@@ -429,10 +462,11 @@ export default function ToolPage() {
                       type="button"
                       className={copyBtn}
                       onClick={() =>
+                        (posthog?.capture("length_adjusted", { direction: "shorter" }),
                         generateWeeklyUpdate({
                           lengthInstruction:
                             "Make the output shorter. Aim for 1-2 tight sentences maximum."
-                        })
+                        }))
                       }
                       disabled={isWeeklyUpdateLoading}
                     >
@@ -442,10 +476,11 @@ export default function ToolPage() {
                       type="button"
                       className={copyBtn}
                       onClick={() =>
+                        (posthog?.capture("length_adjusted", { direction: "more_detail" }),
                         generateWeeklyUpdate({
                           lengthInstruction:
                             "Expand the output slightly. Aim for 3-4 sentences. Add more specific delivery context where it is clearly supported by the input."
-                        })
+                        }))
                       }
                       disabled={isWeeklyUpdateLoading}
                     >

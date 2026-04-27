@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PostHogProvider } from "./providers";
+import { PostHogPageView } from "./posthog-pageview";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Updateflow",
@@ -13,7 +16,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-bg text-text font-serif">{children}</body>
+      <body className="min-h-screen bg-bg text-text font-serif">
+        <PostHogProvider>
+          <Suspense fallback={null}>
+            <PostHogPageView />
+          </Suspense>
+          {children}
+        </PostHogProvider>
+      </body>
     </html>
   );
 }
