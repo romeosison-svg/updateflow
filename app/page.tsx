@@ -20,8 +20,8 @@ export default function LandingPage() {
         </h1>
         <p className="mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
           Paste your notes from this week. Get a clear, send-ready weekly update
-          instantly. Then add what you need — action list, stakeholder updates,
-          RAID log — all from the same notes.
+          instantly. Then add what you need from the same notes: action list, stakeholder updates,
+          RAID log.
         </p>
 
         <div className="flex flex-wrap items-center gap-4 mt-6 mobile:grid mobile:grid-cols-1">
