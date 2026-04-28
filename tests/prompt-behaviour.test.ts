@@ -27,6 +27,28 @@ describe("Status Update prompt behaviour", () => {
     expect(prompt).toContain("If the source input is already concise and structured, do not expand it");
     expect(prompt).toContain("The output should usually be equal length or shorter than the source unless extra clarity is genuinely needed");
   });
+
+  it("appends any length instruction after the transcript block", () => {
+    const promptWithLengthInstruction = buildGenerationPrompt({
+      transcript: "Vendor sign-off remains outstanding.",
+      outputType: "short-status-update",
+      lengthInstruction: "Make the output shorter. Aim for 1-2 tight sentences maximum."
+    });
+
+    const meetingTranscriptIndex = promptWithLengthInstruction.indexOf("Meeting transcript:");
+    const transcriptIndex = promptWithLengthInstruction.indexOf(
+      "Vendor sign-off remains outstanding."
+    );
+    const additionalInstructionIndex =
+      promptWithLengthInstruction.indexOf("Additional instruction:");
+    const lengthInstructionIndex = promptWithLengthInstruction.indexOf(
+      "Make the output shorter. Aim for 1-2 tight sentences maximum."
+    );
+
+    expect(transcriptIndex).toBeGreaterThan(meetingTranscriptIndex);
+    expect(additionalInstructionIndex).toBeGreaterThan(transcriptIndex);
+    expect(lengthInstructionIndex).toBeGreaterThan(additionalInstructionIndex);
+  });
 });
 
 describe("Action List prompt behaviour", () => {

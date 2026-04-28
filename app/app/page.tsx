@@ -3,6 +3,12 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
+import {
+  getAddToPackAnalyticsType,
+  getCopiedOutputAnalyticsType,
+  MORE_DETAIL_LENGTH_INSTRUCTION,
+  SHORTER_LENGTH_INSTRUCTION
+} from "@/lib/analytics";
 import type { GeneratedOutputs, OutputCardKey } from "@/lib/output";
 
 const sampleTranscripts = [
@@ -165,7 +171,9 @@ export default function ToolPage() {
 
     setError("");
     setIsActionListLoading(true);
-    posthog?.capture("add_to_pack_clicked", { type: "action_list" });
+    posthog?.capture("add_to_pack_clicked", {
+      type: getAddToPackAnalyticsType("actionList")
+    });
 
     try {
       const response = await fetch("/api/generate", {
@@ -217,12 +225,7 @@ export default function ToolPage() {
 
     setError("");
     posthog?.capture("add_to_pack_clicked", {
-      type:
-        key === "internalUpdate"
-          ? "internal_update"
-          : key === "externalUpdate"
-            ? "external_update"
-            : "raid_log"
+      type: getAddToPackAnalyticsType(key)
     });
 
     switch (key) {
@@ -314,16 +317,7 @@ export default function ToolPage() {
       await navigator.clipboard.writeText(value);
 
       posthog?.capture("output_copied", {
-        output:
-          key === "shortStatus"
-            ? "weekly_update"
-            : key === "actionList"
-              ? "action_list"
-              : key === "internalUpdate"
-                ? "internal_update"
-                : key === "externalUpdate"
-                  ? "external_update"
-                  : "raid_log"
+        output: getCopiedOutputAnalyticsType(key)
       });
 
       setCopyLabels((current) => ({
@@ -464,8 +458,7 @@ export default function ToolPage() {
                       onClick={() =>
                         (posthog?.capture("length_adjusted", { direction: "shorter" }),
                         generateWeeklyUpdate({
-                          lengthInstruction:
-                            "Make the output shorter. Aim for 1-2 tight sentences maximum."
+                          lengthInstruction: SHORTER_LENGTH_INSTRUCTION
                         }))
                       }
                       disabled={isWeeklyUpdateLoading}
@@ -478,8 +471,7 @@ export default function ToolPage() {
                       onClick={() =>
                         (posthog?.capture("length_adjusted", { direction: "more_detail" }),
                         generateWeeklyUpdate({
-                          lengthInstruction:
-                            "Expand the output slightly. Aim for 3-4 sentences. Add more specific delivery context where it is clearly supported by the input."
+                          lengthInstruction: MORE_DETAIL_LENGTH_INSTRUCTION
                         }))
                       }
                       disabled={isWeeklyUpdateLoading}
