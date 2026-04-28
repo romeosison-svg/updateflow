@@ -4,8 +4,7 @@ const valueItems = [
   "Weekly update, ready to send",
   "Action list with owners and priorities",
   "Internal team update",
-  "External stakeholder update",
-  "RAID log, generated on demand"
+  "External stakeholder update"
 ] as const;
 
 export default function LandingPage() {
@@ -20,8 +19,8 @@ export default function LandingPage() {
         </h1>
         <p className="mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
           Paste your notes from this week. Get a clear, send-ready weekly update
-          instantly. Then add what you need from the same notes: action list, stakeholder updates,
-          RAID log.
+          instantly. Then add what you need from the same notes: action list and stakeholder
+          updates.
         </p>
 
         <div className="flex flex-wrap items-center gap-4 mt-6 mobile:grid mobile:grid-cols-1">
@@ -74,7 +73,7 @@ export default function LandingPage() {
         <p className="m-0 text-muted font-sans text-base leading-relaxed">
           Rough notes go in. A clear, professional weekly update comes out —
           formatted the way a delivery-focused PM would write it. Add stakeholder
-          updates, actions, and RAID on demand from the same input.
+          updates and actions on demand from the same input.
         </p>
       </section>
 
