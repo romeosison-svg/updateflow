@@ -17,7 +17,7 @@ describe("output configuration", () => {
     ]);
   });
 
-  it("keeps Action List, Internal Stakeholder Update, External Stakeholder Update, and RAID as optional outputs", () => {
+  it("keeps Action List, Internal Stakeholder Update, and External Stakeholder Update as optional outputs", () => {
     expect(OPTIONAL_OUTPUT_CONFIG).toEqual([
       {
         key: "actionList",
@@ -35,11 +35,6 @@ describe("output configuration", () => {
         outputType: "stakeholder-update",
         audience: "external",
         title: "External Stakeholder Update"
-      },
-      {
-        key: "raid",
-        outputType: "raid-log",
-        title: "RAID"
       }
     ]);
   });

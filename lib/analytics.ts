@@ -27,7 +27,7 @@ export function capturePostHogPageView(
 }
 
 export function getAddToPackAnalyticsType(
-  key: Extract<OutputCardKey, "actionList" | "externalUpdate" | "internalUpdate" | "raid">
+  key: Extract<OutputCardKey, "actionList" | "externalUpdate" | "internalUpdate">
 ) {
   switch (key) {
     case "actionList":
@@ -36,8 +36,6 @@ export function getAddToPackAnalyticsType(
       return "internal_update";
     case "externalUpdate":
       return "external_update";
-    case "raid":
-      return "raid_log";
   }
 }
 
@@ -51,7 +49,5 @@ export function getCopiedOutputAnalyticsType(key: OutputCardKey) {
       return "internal_update";
     case "externalUpdate":
       return "external_update";
-    case "raid":
-      return "raid_log";
   }
 }

@@ -25,7 +25,6 @@ describe("analytics event payload contracts", () => {
     expect(getAddToPackAnalyticsType("actionList")).toBe("action_list");
     expect(getAddToPackAnalyticsType("internalUpdate")).toBe("internal_update");
     expect(getAddToPackAnalyticsType("externalUpdate")).toBe("external_update");
-    expect(getAddToPackAnalyticsType("raid")).toBe("raid_log");
   });
 
   it("keeps copied-output payload types stable", () => {
@@ -33,7 +32,6 @@ describe("analytics event payload contracts", () => {
     expect(getCopiedOutputAnalyticsType("actionList")).toBe("action_list");
     expect(getCopiedOutputAnalyticsType("internalUpdate")).toBe("internal_update");
     expect(getCopiedOutputAnalyticsType("externalUpdate")).toBe("external_update");
-    expect(getCopiedOutputAnalyticsType("raid")).toBe("raid_log");
   });
 
   it("keeps weekly update length-adjustment instructions stable", () => {

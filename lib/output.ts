@@ -1,5 +1,4 @@
 export const AVAILABLE_OUTPUT_TYPES = [
-  "raid-log",
   "stakeholder-update",
   "action-list",
   "short-status-update"
@@ -36,11 +35,6 @@ export const OPTIONAL_OUTPUT_CONFIG = [
     outputType: "stakeholder-update",
     audience: "external",
     title: "External Stakeholder Update"
-  },
-  {
-    key: "raid",
-    outputType: "raid-log",
-    title: "RAID"
   }
 ] as const;
 
@@ -48,8 +42,7 @@ export type OutputCardKey =
   | "internalUpdate"
   | "externalUpdate"
   | "shortStatus"
-  | "actionList"
-  | "raid";
+  | "actionList";
 
 export type GeneratedOutputs = Partial<Record<OutputCardKey, string>>;
 
