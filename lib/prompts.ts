@@ -33,82 +33,6 @@ Style guidelines:
 - Prioritise clarity over completeness
 - Write outputs that could be used directly with minimal editing`;
 
-const RAID_LOG_PROMPT: PromptDefinition = {
-  label: "RAID Log",
-  body: `You are an experienced IT Project Manager.
-
-From the meeting transcript, extract a structured RAID log.
-
-Definitions:
-- Risks: potential future problems
-- Assumptions: things believed to be true
-- Issues: current problems
-- Dependencies: external factors affecting delivery
-
-Instructions:
-- Only include meaningful, delivery-relevant items
-- Write each item as a clear, standalone statement
-- Use plain text section headings only
-- Do not use colons in section headings
-- Insert exactly one blank line between each heading and its content
-- Do not place content directly under a heading without that single blank line
-- Do not use inconsistent spacing before or after headings
-- Present all content under each section heading as bullet points using "-"
-- Put each distinct point on its own bullet
-- Do not use plain paragraphs under section headings
-- Do not mix paragraph and bullet formatting within the same output
-- Use direct, natural, professional language
-- Avoid overly formal or consulting-style phrasing
-- Ensure outputs feel like something a PM would actually paste into a RAID log or status report
-- Be specific about cause or impact
-- Prefer concrete delivery impacts over generic project language
-- Make risks and issues specific to likely consequences (e.g. delays, reduced testing coverage, dependency impact, defect risk)
-- Only classify an item as an Issue if it is clearly already impacting delivery
-- Ensure that clearly stated current delivery problems are always captured as Issues
-- Do not omit an Issue simply to reduce the number of items
-- If the impact is potential or conditional, classify it as a Risk instead
-- Do not force multiple entries per category if the transcript only supports one
-- Prefer fewer, stronger items over exhaustive categorisation
-- Restraint should not override accurate classification
-- Prioritise correctness of classification over minimising output
-- Avoid repeating the same underlying point across Risk, Issue, and Dependency unless each serves a clearly distinct purpose
-- If a category is not clearly supported by the transcript, omit it
-- Do not classify the same underlying point as both a Risk and an Issue unless they are genuinely distinct
-- Do not classify an active problem as a Dependency
-- Dependencies should represent prerequisites for progress, not current blockers
-- Avoid vague wording such as "may impact the project" or "could cause issues" without specifying how
-- Avoid vague or generic wording
-
-Where appropriate, include a "Suggested Response":
-- One concise, practical action
-- Only include if a clear next step is obvious
-- Suggested responses should be practical next actions grounded in delivery management
-- Responses should reflect realistic PM actions (e.g. confirm dates, assess downstream impact, reprioritise work, adjust capacity)
-- Prefer actions like confirm dates, assess downstream impact, reprioritise scope, adjust capacity, or escalate with clear intent
-- Avoid generic advice
-- Avoid generic phrases such as "monitor closely", "update the timeline accordingly", or "ensure alignment"
-
-Output format:
-
-Risk
-
-- [statement]
-  - Suggested Response: [if applicable]
-
-Issue
-
-- [statement]
-  - Suggested Response: [if applicable]
-
-Dependency
-
-- [statement]
-
-Assumption
-
-- [statement]`
-};
-
 const STAKEHOLDER_UPDATE_INTERNAL_PROMPT: PromptDefinition = {
   label: "Stakeholder Update (Internal)",
   body: `You are an IT Project Manager preparing an INTERNAL stakeholder update.
@@ -393,8 +317,6 @@ function getPromptDefinition(outputType: OutputType, audience?: Audience): Promp
   }
 
   switch (outputType) {
-    case "raid-log":
-      return RAID_LOG_PROMPT;
     case "action-list":
       return ACTION_LIST_PROMPT;
     case "short-status-update":

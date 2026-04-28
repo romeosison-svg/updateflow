@@ -44,13 +44,12 @@ const outputCards: Array<{ key: Extract<OutputCardKey, "shortStatus">; title: st
 
 const optionalOutputCards: Array<{
   errorLabel: string;
-  key: Extract<OutputCardKey, "actionList" | "externalUpdate" | "internalUpdate" | "raid">;
+  key: Extract<OutputCardKey, "actionList" | "externalUpdate" | "internalUpdate">;
   title: string;
 }> = [
   { key: "actionList", title: "Action List", errorLabel: "the action list" },
   { key: "internalUpdate", title: "Internal Update", errorLabel: "the internal update" },
-  { key: "externalUpdate", title: "External Update", errorLabel: "the external update" },
-  { key: "raid", title: "RAID Log", errorLabel: "the RAID log" }
+  { key: "externalUpdate", title: "External Update", errorLabel: "the external update" }
 ];
 
 export default function ToolPage() {
@@ -61,7 +60,6 @@ export default function ToolPage() {
   const [isActionListLoading, setIsActionListLoading] = useState(false);
   const [isExternalLoading, setIsExternalLoading] = useState(false);
   const [isInternalLoading, setIsInternalLoading] = useState(false);
-  const [isRaidLoading, setIsRaidLoading] = useState(false);
   const [isWeeklyUpdateLoading, setIsWeeklyUpdateLoading] = useState(false);
   const [copyLabels, setCopyLabels] = useState<
     Partial<Record<OutputCardKey, string>>
@@ -215,7 +213,7 @@ export default function ToolPage() {
   };
 
   const handleGenerateOptionalOutput = async (
-    key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate" | "raid">,
+    key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate">,
     errorLabel: string
   ) => {
     if (!transcript.trim()) {
@@ -235,9 +233,6 @@ export default function ToolPage() {
       case "externalUpdate":
         setIsExternalLoading(true);
         break;
-      case "raid":
-        setIsRaidLoading(true);
-        break;
     }
 
     try {
@@ -245,17 +240,14 @@ export default function ToolPage() {
         transcript: string;
         includeExternal?: boolean;
         includeInternal?: boolean;
-        includeRaid?: boolean;
       } = {
         transcript
       };
 
       if (key === "internalUpdate") {
         requestBody.includeInternal = true;
-      } else if (key === "externalUpdate") {
-        requestBody.includeExternal = true;
       } else {
-        requestBody.includeRaid = true;
+        requestBody.includeExternal = true;
       }
 
       const response = await fetch("/api/generate", {
@@ -295,9 +287,6 @@ export default function ToolPage() {
           break;
         case "externalUpdate":
           setIsExternalLoading(false);
-          break;
-        case "raid":
-          setIsRaidLoading(false);
           break;
       }
     }
@@ -495,18 +484,14 @@ export default function ToolPage() {
                     ? isActionListLoading
                     : card.key === "internalUpdate"
                       ? isInternalLoading
-                      : card.key === "externalUpdate"
-                        ? isExternalLoading
-                        : isRaidLoading;
+                      : isExternalLoading;
 
                 const loadingLabel =
                   card.key === "actionList"
                     ? "Generating Action List..."
                     : card.key === "internalUpdate"
                       ? "Generating Internal Update..."
-                      : card.key === "externalUpdate"
-                        ? "Generating External Update..."
-                        : "Generating RAID...";
+                      : "Generating External Update...";
 
                 return (
                   <button
@@ -534,9 +519,7 @@ export default function ToolPage() {
                 ? isActionListLoading
                 : card.key === "internalUpdate"
                   ? isInternalLoading
-                  : card.key === "externalUpdate"
-                    ? isExternalLoading
-                    : isRaidLoading;
+                  : isExternalLoading;
             const copyState = copyLabels[card.key] ?? "Copy";
 
             if (!isCardLoading && !value) {
@@ -569,9 +552,7 @@ export default function ToolPage() {
                         ? "Generating Action List..."
                         : card.key === "internalUpdate"
                           ? "Generating Internal Update..."
-                          : card.key === "externalUpdate"
-                            ? "Generating External Update..."
-                            : "Generating RAID..."}
+                          : "Generating External Update..."}
                     </p>
                   ) : value ? (
                     <pre className="m-0 whitespace-pre-wrap break-words text-base font-sans leading-base">
@@ -583,9 +564,7 @@ export default function ToolPage() {
                         ? "Actions with owners and priorities will appear here."
                         : card.key === "internalUpdate"
                         ? "Your internal team update will appear here."
-                        : card.key === "externalUpdate"
-                          ? "Your stakeholder-facing update will appear here."
-                          : "Risks, assumptions, issues, and dependencies will appear here."}
+                        : "Your stakeholder-facing update will appear here."}
                     </p>
                   )}
                 </div>

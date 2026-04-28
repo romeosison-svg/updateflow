@@ -9,7 +9,6 @@ export async function POST(request: Request) {
     includeActionList?: boolean;
     includeExternal?: boolean;
     includeInternal?: boolean;
-    includeRaid?: boolean;
     lengthInstruction?: string;
     outputType?: string;
     transcript?: string;
@@ -32,7 +31,6 @@ export async function POST(request: Request) {
         includeActionList?: boolean;
         includeExternal?: boolean;
         includeInternal?: boolean;
-        includeRaid?: boolean;
         lengthInstruction?: string;
         outputType?: string;
         transcript?: string;
@@ -50,7 +48,6 @@ export async function POST(request: Request) {
     const includeActionList = body.includeActionList === true;
     const includeExternal = body.includeExternal === true;
     const includeInternal = body.includeInternal === true;
-    const includeRaid = body.includeRaid === true;
     const lengthInstruction = body.lengthInstruction?.trim();
     const outputType = body.outputType?.trim();
     const transcriptWithLengthInstruction = lengthInstruction
@@ -73,21 +70,6 @@ export async function POST(request: Request) {
           status: 400
         }
       );
-    }
-
-    if (includeRaid) {
-      const raid = await generateText({
-        transcript,
-        outputType: "raid-log"
-      });
-
-      const outputs: GeneratedOutputs = {
-        raid
-      };
-
-      return NextResponse.json({
-        outputs
-      });
     }
 
     if (includeActionList || outputType === "action-list") {
