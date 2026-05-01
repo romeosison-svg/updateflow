@@ -1,8 +1,41 @@
-import { buildGenerationPrompt } from "@/lib/prompts";
-import type { Audience, OutputType } from "@/lib/output";
+import { buildGenerationPrompt } from "./prompts";
+import type { Audience, OutputType } from "./output";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4.1";
+const NO_DELIVERY_CONTENT_MESSAGE = "No delivery content identified from this input.";
+const NO_DELIVERY_ACTIONS_MESSAGE = "No delivery actions identified from this input.";
+
+export const ADMIN_INDICATORS = [
+  "create a folder",
+  "create a new folder",
+  "folder structure",
+  "directory structure",
+  "naming convention",
+  "file organisation",
+  "file organization",
+  "update the report",
+  "update the spreadsheet",
+  "update the sheet",
+  "reporting setup",
+  "reporting process",
+  "reporting template",
+  "send an email to notify",
+  "send an email about",
+  "email the team about",
+  "archive the",
+  "housekeeping",
+  "missing from the sheet",
+  "missing from the spreadsheet",
+  "add to the sheet",
+  "add to the spreadsheet",
+  "compare the sheet",
+  "compare the spreadsheet",
+  "missing content from",
+  "older stories",
+  "march and april",
+  "revisit and update status"
+] as const;
 
 type GenerateTextParams = {
   transcript: string;
@@ -25,6 +58,135 @@ type OpenAIResponse = {
   }>;
   output_text?: string;
 };
+
+function containsAdminIndicator(content: string): boolean {
+  const normalisedContent = content.toLowerCase();
+
+  return ADMIN_INDICATORS.some((indicator) => normalisedContent.includes(indicator));
+}
+
+export function filterActionListOutput(rawOutput: string): string {
+  const trimmedOutput = rawOutput.trim();
+
+  if (trimmedOutput === NO_DELIVERY_ACTIONS_MESSAGE) {
+    return trimmedOutput;
+  }
+
+  const actionBlocks = trimmedOutput
+    .split(/(?=^\d+\.)/m)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  if (actionBlocks.length === 0) {
+    return trimmedOutput;
+  }
+
+  const validBlocks = actionBlocks.filter((block) => !containsAdminIndicator(block));
+
+  if (validBlocks.length === 0) {
+    return NO_DELIVERY_ACTIONS_MESSAGE;
+  }
+
+  return validBlocks
+    .map((block, index) => block.replace(/^\d+\./, `${index + 1}.`).trim())
+    .join("\n\n");
+}
+
+export function filterSectionedOutput(rawOutput: string): string {
+  const trimmedOutput = rawOutput.trim();
+
+  if (trimmedOutput === NO_DELIVERY_CONTENT_MESSAGE) {
+    return trimmedOutput;
+  }
+
+  const lines = trimmedOutput.split(/\r?\n/);
+  const sections: Array<{ heading: string; bullets: string[] }> = [];
+  let currentSection: { heading: string; bullets: string[] } | null = null;
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine) {
+      continue;
+    }
+
+    if (trimmedLine.startsWith("-")) {
+      if (currentSection) {
+        currentSection.bullets.push(trimmedLine);
+      }
+
+      continue;
+    }
+
+    currentSection = {
+      heading: trimmedLine,
+      bullets: []
+    };
+    sections.push(currentSection);
+  }
+
+  if (sections.length === 0) {
+    const filteredLines = lines.filter((line) => {
+      const trimmedLine = line.trim();
+
+      return trimmedLine && !containsAdminIndicator(trimmedLine);
+    });
+
+    return filteredLines.length > 0
+      ? filteredLines.join("\n")
+      : NO_DELIVERY_CONTENT_MESSAGE;
+  }
+
+  const filteredSections = sections
+    .map((section) => ({
+      heading: section.heading,
+      bullets: section.bullets.filter((bullet) => !containsAdminIndicator(bullet))
+    }))
+    .filter((section) => section.bullets.length > 0);
+
+  if (filteredSections.length === 0) {
+    return NO_DELIVERY_CONTENT_MESSAGE;
+  }
+
+  return filteredSections
+    .map((section) => [section.heading, "", ...section.bullets].join("\n"))
+    .join("\n\n");
+}
+
+export function filterShortStatusOutput(rawOutput: string): string {
+  const trimmedOutput = rawOutput.trim();
+
+  if (trimmedOutput === NO_DELIVERY_CONTENT_MESSAGE) {
+    return trimmedOutput;
+  }
+
+  const sentences =
+    trimmedOutput.match(/[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g)?.map((sentence) => sentence.trim()) ??
+    [];
+
+  if (sentences.length === 0) {
+    return trimmedOutput;
+  }
+
+  const filteredSentences = sentences.filter((sentence) => !containsAdminIndicator(sentence));
+
+  if (filteredSentences.length === 0) {
+    return NO_DELIVERY_CONTENT_MESSAGE;
+  }
+
+  return filteredSentences.join(" ").trim();
+}
+
+function filterGeneratedOutput(output: string, outputType: OutputType): string {
+  switch (outputType) {
+    case "action-list":
+      return filterActionListOutput(output);
+    case "stakeholder-update":
+      return filterSectionedOutput(output);
+    case "short-status-update":
+      return filterShortStatusOutput(output);
+  }
+}
 
 export async function generateText({
   transcript,
@@ -76,7 +238,7 @@ export async function generateText({
   const outputText = data.output_text?.trim();
 
   if (outputText) {
-    return outputText;
+    return filterGeneratedOutput(outputText, outputType);
   }
 
   const fallbackOutput = data.output
@@ -87,7 +249,7 @@ export async function generateText({
     .join("\n\n");
 
   if (fallbackOutput) {
-    return fallbackOutput;
+    return filterGeneratedOutput(fallbackOutput, outputType);
   }
 
   if (data.error?.message) {
