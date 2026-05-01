@@ -1,18 +1,48 @@
 import { NextResponse } from "next/server";
-import { generateText } from "@/lib/generate";
-import type { GeneratedOutputs } from "@/lib/output";
+import {
+  generateText,
+  MORE_DETAIL_EXISTING_OUTPUT_INSTRUCTION,
+  SHORTER_EXISTING_OUTPUT_INSTRUCTION,
+  type LengthAdjustmentDirection
+} from "../../../lib/generate";
+import type { GeneratedOutputs } from "../../../lib/output";
 
 const MAX_TRANSCRIPT_LENGTH = 25000;
 
-export async function POST(request: Request) {
-  let body: {
-    includeActionList?: boolean;
-    includeExternal?: boolean;
-    includeInternal?: boolean;
-    lengthInstruction?: string;
-    outputType?: string;
-    transcript?: string;
+type GenerateRouteBody = {
+  adjustmentDirection?: LengthAdjustmentDirection;
+  currentOutput?: string;
+  includeActionList?: boolean;
+  includeExternal?: boolean;
+  includeInternal?: boolean;
+  outputType?: string;
+  transcript?: string;
+};
+
+export function getLengthInstructionForAdjustmentDirection(
+  adjustmentDirection?: LengthAdjustmentDirection
+) {
+  switch (adjustmentDirection) {
+    case "shorter":
+      return SHORTER_EXISTING_OUTPUT_INSTRUCTION;
+    case "more_detail":
+      return MORE_DETAIL_EXISTING_OUTPUT_INSTRUCTION;
+    default:
+      return undefined;
+  }
+}
+
+export function getShortStatusGenerationParams(body: GenerateRouteBody) {
+  return {
+    transcript: body.transcript?.trim() ?? "",
+    currentOutput: body.currentOutput?.trim() || undefined,
+    lengthInstruction: getLengthInstructionForAdjustmentDirection(body.adjustmentDirection),
+    outputType: "short-status-update" as const
   };
+}
+
+export async function POST(request: Request) {
+  let body: GenerateRouteBody;
 
   try {
     const contentType = request.headers.get("content-type") ?? "";
@@ -27,14 +57,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      body = (await request.json()) as {
-        includeActionList?: boolean;
-        includeExternal?: boolean;
-        includeInternal?: boolean;
-        lengthInstruction?: string;
-        outputType?: string;
-        transcript?: string;
-      };
+      body = (await request.json()) as GenerateRouteBody;
     } catch {
       return NextResponse.json(
         { error: "Request body must be valid JSON." },
@@ -48,11 +71,7 @@ export async function POST(request: Request) {
     const includeActionList = body.includeActionList === true;
     const includeExternal = body.includeExternal === true;
     const includeInternal = body.includeInternal === true;
-    const lengthInstruction = body.lengthInstruction?.trim();
     const outputType = body.outputType?.trim();
-    const transcriptWithLengthInstruction = lengthInstruction
-      ? `${transcript}\n\nAdditional instruction: ${lengthInstruction}`
-      : transcript;
 
     if (!transcript) {
       return NextResponse.json(
@@ -119,10 +138,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const shortStatus = await generateText({
-      transcript: transcriptWithLengthInstruction,
-      outputType: "short-status-update"
-    });
+    const shortStatus = await generateText(getShortStatusGenerationParams(body));
 
     const outputs: GeneratedOutputs = {
       shortStatus

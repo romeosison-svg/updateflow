@@ -5,11 +5,45 @@ import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
 import {
   getAddToPackAnalyticsType,
-  getCopiedOutputAnalyticsType,
-  MORE_DETAIL_LENGTH_INSTRUCTION,
-  SHORTER_LENGTH_INSTRUCTION
-} from "@/lib/analytics";
-import type { GeneratedOutputs, OutputCardKey } from "@/lib/output";
+  getCopiedOutputAnalyticsType
+} from "../../lib/analytics";
+import type { GeneratedOutputs, OutputCardKey } from "../../lib/output";
+
+export type WeeklyUpdateAdjustmentDirection = "shorter" | "more_detail";
+export const LENGTH_ADJUSTED_EVENT = "length_adjusted";
+export const RESET_TO_DEFAULT_EVENT = "reset_to_default";
+
+type WeeklyUpdateRequestBody = {
+  adjustmentDirection?: WeeklyUpdateAdjustmentDirection;
+  currentOutput?: string;
+  transcript: string;
+};
+
+export function buildWeeklyUpdateRequestBody({
+  transcript,
+  currentOutput,
+  adjustmentDirection
+}: WeeklyUpdateRequestBody): WeeklyUpdateRequestBody {
+  const body: WeeklyUpdateRequestBody = {
+    transcript
+  };
+
+  if (adjustmentDirection) {
+    body.adjustmentDirection = adjustmentDirection;
+  }
+
+  if (currentOutput?.trim()) {
+    body.currentOutput = currentOutput;
+  }
+
+  return body;
+}
+
+export function getLengthAdjustedEventPayload(direction: WeeklyUpdateAdjustmentDirection) {
+  return {
+    direction
+  };
+}
 
 const sampleTranscripts = [
   {
@@ -56,6 +90,8 @@ export default function ToolPage() {
   const posthog = usePostHog();
   const [transcript, setTranscript] = useState("");
   const [outputs, setOutputs] = useState<GeneratedOutputs | null>(null);
+  const [defaultWeeklyUpdate, setDefaultWeeklyUpdate] = useState("");
+  const [displayedWeeklyUpdate, setDisplayedWeeklyUpdate] = useState("");
   const [error, setError] = useState("");
   const [isActionListLoading, setIsActionListLoading] = useState(false);
   const [isExternalLoading, setIsExternalLoading] = useState(false);
@@ -86,7 +122,9 @@ export default function ToolPage() {
   const generateWeeklyUpdate = async (
     options?: {
       captureGenerateEvent?: boolean;
-      lengthInstruction?: string;
+      adjustmentDirection?: WeeklyUpdateAdjustmentDirection;
+      currentOutput?: string;
+      isResetToDefault?: boolean;
       resetSupplementaryOutputs?: boolean;
     }
   ) => {
@@ -95,6 +133,10 @@ export default function ToolPage() {
         setOutputs(null);
         setCopyLabels({});
       }
+      if (options?.isResetToDefault) {
+        setDefaultWeeklyUpdate("");
+        setDisplayedWeeklyUpdate("");
+      }
       setError("Paste some meeting notes or a transcript before generating.");
       return;
     }
@@ -102,34 +144,43 @@ export default function ToolPage() {
     setError("");
     setIsWeeklyUpdateLoading(true);
 
+    if (options?.isResetToDefault) {
+      setDisplayedWeeklyUpdate("");
+    }
+
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          transcript,
-          lengthInstruction: options?.lengthInstruction
-        })
+        body: JSON.stringify(
+          buildWeeklyUpdateRequestBody({
+            transcript,
+            currentOutput: options?.currentOutput,
+            adjustmentDirection: options?.adjustmentDirection
+          })
+        )
       });
 
       const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
+      const nextWeeklyUpdate = data.outputs?.shortStatus ?? "";
 
-      if (!response.ok || !data.outputs) {
+      if (!response.ok || !nextWeeklyUpdate) {
         throw new Error(data.error ?? "Something went wrong while generating the outputs.");
       }
 
-      setOutputs((current) => {
-        const nextOutputs = options?.resetSupplementaryOutputs
-          ? {}
-          : (current ?? {});
+      if (options?.resetSupplementaryOutputs) {
+        setOutputs({});
+      }
 
-        return {
-          ...nextOutputs,
-          shortStatus: data.outputs?.shortStatus ?? ""
-        };
-      });
+      if (options?.adjustmentDirection) {
+        setDisplayedWeeklyUpdate(nextWeeklyUpdate);
+      } else {
+        setDefaultWeeklyUpdate(nextWeeklyUpdate);
+        setDisplayedWeeklyUpdate(nextWeeklyUpdate);
+      }
+
       setCopyLabels((current) => ({
         ...(options?.resetSupplementaryOutputs ? {} : current),
         shortStatus: "Copy"
@@ -141,6 +192,9 @@ export default function ToolPage() {
     } catch (generationError) {
       if (options?.resetSupplementaryOutputs) {
         setOutputs(null);
+      }
+      if (options?.isResetToDefault) {
+        setDisplayedWeeklyUpdate(defaultWeeklyUpdate);
       }
       setError(
         generationError instanceof Error
@@ -158,6 +212,29 @@ export default function ToolPage() {
     await generateWeeklyUpdate({
       captureGenerateEvent: true,
       resetSupplementaryOutputs: true
+    });
+  };
+
+  const handleAdjustWeeklyUpdateLength = async (
+    direction: WeeklyUpdateAdjustmentDirection
+  ) => {
+    if (!displayedWeeklyUpdate.trim()) {
+      return;
+    }
+
+    posthog?.capture(LENGTH_ADJUSTED_EVENT, getLengthAdjustedEventPayload(direction));
+
+    await generateWeeklyUpdate({
+      adjustmentDirection: direction,
+      currentOutput: displayedWeeklyUpdate
+    });
+  };
+
+  const handleResetToDefault = async () => {
+    posthog?.capture(RESET_TO_DEFAULT_EVENT);
+
+    await generateWeeklyUpdate({
+      isResetToDefault: true
     });
   };
 
@@ -401,7 +478,7 @@ export default function ToolPage() {
 
         <section className="grid gap-5">
           {outputCards.map((card) => {
-            const value = outputs?.[card.key] ?? "";
+            const value = displayedWeeklyUpdate;
             const copyState = copyLabels[card.key] ?? "Copy";
 
             return (
@@ -444,12 +521,7 @@ export default function ToolPage() {
                     <button
                       type="button"
                       className={copyBtn}
-                      onClick={() =>
-                        (posthog?.capture("length_adjusted", { direction: "shorter" }),
-                        generateWeeklyUpdate({
-                          lengthInstruction: SHORTER_LENGTH_INSTRUCTION
-                        }))
-                      }
+                      onClick={() => handleAdjustWeeklyUpdateLength("shorter")}
                       disabled={isWeeklyUpdateLoading}
                     >
                       Shorter
@@ -457,15 +529,18 @@ export default function ToolPage() {
                     <button
                       type="button"
                       className={copyBtn}
-                      onClick={() =>
-                        (posthog?.capture("length_adjusted", { direction: "more_detail" }),
-                        generateWeeklyUpdate({
-                          lengthInstruction: MORE_DETAIL_LENGTH_INSTRUCTION
-                        }))
-                      }
+                      onClick={() => handleAdjustWeeklyUpdateLength("more_detail")}
                       disabled={isWeeklyUpdateLoading}
                     >
                       More detail
+                    </button>
+                    <button
+                      type="button"
+                      className={copyBtn}
+                      onClick={handleResetToDefault}
+                      disabled={isWeeklyUpdateLoading || !defaultWeeklyUpdate}
+                    >
+                      Reset to default
                     </button>
                   </div>
                 )}

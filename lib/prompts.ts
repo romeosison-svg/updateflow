@@ -358,11 +358,11 @@ Produce a 2-3 sentence update that:
 - indicates next focus
 
 Instructions:
-- Keep it sharp and concise (max 3 sentences)
-- Ensure the update reads as a smooth, cohesive 2-3 sentence paragraph
-- Limit output to 2-3 short sentences maximum
-- If the source input is already concise and structured, do not expand it
-- The output should usually be equal length or shorter than the source unless extra clarity is genuinely needed
+- Output must be exactly 2 to 3 sentences. No exceptions.
+- Never exceed 3 sentences regardless of the volume or complexity of the input
+- If the input is complex, prioritise the most important delivery point, key risk, and next focus — do not expand beyond 3 sentences to accommodate additional detail
+- If the input is already concise, match or reduce its length
+- A 2 sentence output is acceptable and often preferable to a padded 3 sentence output
 - If the input is unstructured or lacks clear formatting, identify delivery content by meaning and context rather than structure
 - Do not skip or omit delivery content solely because it is poorly formatted
 - Do not over-extract by treating every sentence as a delivery point

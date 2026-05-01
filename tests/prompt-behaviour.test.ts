@@ -10,7 +10,8 @@ describe("Status Update prompt behaviour", () => {
 
   it("requires a concise 2-3 sentence output", () => {
     expect(prompt).toContain("Produce a 2-3 sentence update");
-    expect(prompt).toContain("Keep it sharp and concise (max 3 sentences)");
+    expect(prompt).toContain("Output must be exactly 2 to 3 sentences. No exceptions.");
+    expect(prompt).toContain("Never exceed 3 sentences regardless of the volume or complexity of the input");
   });
 
   it("blocks speculative impact and over-inference", () => {
@@ -24,8 +25,8 @@ describe("Status Update prompt behaviour", () => {
   });
 
   it("biases toward compression when the source is already concise", () => {
-    expect(prompt).toContain("If the source input is already concise and structured, do not expand it");
-    expect(prompt).toContain("The output should usually be equal length or shorter than the source unless extra clarity is genuinely needed");
+    expect(prompt).toContain("If the input is already concise, match or reduce its length");
+    expect(prompt).toContain("A 2 sentence output is acceptable and often preferable to a padded 3 sentence output");
   });
 
   it("prepends the relevance filter before the rest of the prompt wrapper", () => {
