@@ -117,6 +117,9 @@ Instructions:
 - Prefer active, outcome-oriented language over passive phrasing
 - Reduce verbosity and do not expand points into longer or more complex sentences than necessary
 - Do not add new risks, issues, dependencies, or actions unless they are clearly grounded in the transcript
+- Do not include content related to reporting admin, folder management, file organisation, or process housekeeping
+- Do not include content that exists solely to support internal reporting or administrative processes rather than project delivery
+- Focus only on content that directly reflects delivery progress, risks, decisions, or outcomes
 - Avoid generic or filler wording
 - Ensure outputs feel like something a senior PM would send with minimal or no editing
 - Maintain useful detail after sanitisation`
@@ -167,6 +170,9 @@ Instructions:
 - Keep it concise and credible
 - Reduce verbosity and do not expand points into longer or more complex sentences than necessary
 - Do not add new risks, issues, dependencies, or actions unless they are clearly grounded in the transcript
+- Do not include content related to reporting admin, folder management, file organisation, or process housekeeping
+- Do not include content that exists solely to support internal reporting or administrative processes rather than project delivery
+- Focus only on content that directly reflects delivery progress, risks, decisions, or outcomes
 - Avoid over-explaining or adding unnecessary commentary
 - Avoid sounding reactive, defensive, or overly detailed
 - Maintain useful detail after sanitisation`
@@ -234,6 +240,9 @@ Instructions:
 - Prioritise accuracy and credibility over completeness
 - Only include actions that add real value beyond what is already being tracked
 - If a senior PM would not create a new task for it, do not include it
+- Do not include actions related to reporting admin, folder management, file organisation, or process housekeeping
+- Do not include actions that exist solely to support internal reporting or administrative processes rather than project delivery
+- Focus only on actions that directly advance or protect delivery outcomes
 - Avoid generic or vague tasks`
 };
 
@@ -297,7 +306,10 @@ Instructions:
 - End with a clear, specific next focus
 - Avoid fluff or generic language
 - Ensure it sounds credible and realistic
-- Maintain useful detail after sanitisation`
+- Maintain useful detail after sanitisation
+- Do not include content related to reporting admin, folder management, file organisation, or process housekeeping
+- Do not include content that exists solely to support internal reporting or administrative processes rather than project delivery
+- Focus only on content that directly reflects delivery progress, risks, or next steps`
 };
 
 export function buildGenerationPrompt({
