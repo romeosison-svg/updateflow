@@ -5,7 +5,7 @@ import {
   getLengthAdjustedEventPayload,
   LENGTH_ADJUSTED_EVENT,
   RESET_TO_DEFAULT_EVENT
-} from "../app/app/page";
+} from "../app/app/page-helpers";
 
 describe("tool page weekly update helpers", () => {
   it("builds a shorter adjustment request using the current displayed output", () => {

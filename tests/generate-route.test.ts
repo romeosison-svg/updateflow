@@ -1,35 +1,47 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  getLengthInstructionForAdjustmentDirection,
-  getShortStatusGenerationParams
-} from "../app/api/generate/route";
+const { generateText } = vi.hoisted(() => ({
+  generateText: vi.fn()
+}));
+
+vi.mock("../lib/generate", async () => {
+  const actual = await vi.importActual<typeof import("../lib/generate")>("../lib/generate");
+
+  return {
+    ...actual,
+    generateText
+  };
+});
+
+import { POST } from "../app/api/generate/route";
 import {
   MORE_DETAIL_EXISTING_OUTPUT_INSTRUCTION,
   SHORTER_EXISTING_OUTPUT_INSTRUCTION
 } from "../lib/generate";
 
-describe("generate route length adjustment helpers", () => {
-  it("maps shorter adjustments to the shorter existing-output instruction", () => {
-    expect(getLengthInstructionForAdjustmentDirection("shorter")).toBe(
-      SHORTER_EXISTING_OUTPUT_INSTRUCTION
-    );
+describe("generate route length adjustment flow", () => {
+  beforeEach(() => {
+    generateText.mockReset();
+    generateText.mockResolvedValue("Generated weekly update");
   });
 
-  it("maps more detail adjustments to the more-detail existing-output instruction", () => {
-    expect(getLengthInstructionForAdjustmentDirection("more_detail")).toBe(
-      MORE_DETAIL_EXISTING_OUTPUT_INSTRUCTION
-    );
-  });
-
-  it("builds short status params using current output when provided", () => {
-    expect(
-      getShortStatusGenerationParams({
-        transcript: "Original transcript text",
-        currentOutput: "Shortened weekly update",
-        adjustmentDirection: "shorter"
+  it("passes shorter adjustments through to generateText using current output", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript: "Original transcript text",
+          currentOutput: "Shortened weekly update",
+          adjustmentDirection: "shorter"
+        })
       })
-    ).toEqual({
+    );
+
+    expect(response.status).toBe(200);
+    expect(generateText).toHaveBeenCalledWith({
       transcript: "Original transcript text",
       currentOutput: "Shortened weekly update",
       lengthInstruction: SHORTER_EXISTING_OUTPUT_INSTRUCTION,
@@ -37,16 +49,71 @@ describe("generate route length adjustment helpers", () => {
     });
   });
 
-  it("builds reset params from the original transcript when current output is absent", () => {
-    expect(
-      getShortStatusGenerationParams({
-        transcript: "Original transcript text"
+  it("passes more-detail adjustments through to generateText using current output", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript: "Original transcript text",
+          currentOutput: "Expanded weekly update",
+          adjustmentDirection: "more_detail"
+        })
       })
-    ).toEqual({
+    );
+
+    expect(response.status).toBe(200);
+    expect(generateText).toHaveBeenCalledWith({
+      transcript: "Original transcript text",
+      currentOutput: "Expanded weekly update",
+      lengthInstruction: MORE_DETAIL_EXISTING_OUTPUT_INSTRUCTION,
+      outputType: "short-status-update"
+    });
+  });
+
+  it("regenerates from the original transcript when current output is absent", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript: "Original transcript text"
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(generateText).toHaveBeenCalledWith({
       transcript: "Original transcript text",
       currentOutput: undefined,
       lengthInstruction: undefined,
       outputType: "short-status-update"
+    });
+  });
+
+  it("returns the generated weekly update in outputs", async () => {
+    generateText.mockResolvedValueOnce("Tight weekly update");
+
+    const response = await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript: "Original transcript text"
+        })
+      })
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      outputs: {
+        shortStatus: "Tight weekly update"
+      }
     });
   });
 });

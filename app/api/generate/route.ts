@@ -19,7 +19,7 @@ type GenerateRouteBody = {
   transcript?: string;
 };
 
-export function getLengthInstructionForAdjustmentDirection(
+function getLengthInstructionForAdjustmentDirection(
   adjustmentDirection?: LengthAdjustmentDirection
 ) {
   switch (adjustmentDirection) {
@@ -32,7 +32,7 @@ export function getLengthInstructionForAdjustmentDirection(
   }
 }
 
-export function getShortStatusGenerationParams(body: GenerateRouteBody) {
+function getShortStatusGenerationParams(body: GenerateRouteBody) {
   return {
     transcript: body.transcript?.trim() ?? "",
     currentOutput: body.currentOutput?.trim() || undefined,
