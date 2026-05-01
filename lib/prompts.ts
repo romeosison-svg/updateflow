@@ -26,6 +26,8 @@ Silently discard anything in these categories:
 - Meeting housekeeping: scheduling, attendance, logistics, introductions
 - Off-topic discussion: anything not directly affecting delivery progress or outcomes
 - Social content: celebrations, farewells, team socials, general chat
+- Retain delivery content even when surrounded by non-delivery discussion
+- Do not let the volume of non-delivery content reduce the quality or completeness of delivery content that is present
 
 Important:
 - Do not reference or acknowledge discarded content in the output
@@ -37,6 +39,13 @@ const SANITISATION_LAYER = `Step 2: Lightly sanitise the filtered content:
 - Replace company or client names with generic terms
 - Remove highly sensitive identifiers
 - Preserve all relevant delivery context, risks, actions, and meaning
+- When replacing vendor or third party names with generic terms, use "third-party supplier" or "external vendor" rather than internal team references
+- Preserve the accountability and delivery context when sanitising vendor names
+- Do not reassign a vendor delay, dependency, or failure to the internal team when sanitising
+- If the input contains HR or performance-related context that also creates a delivery risk, sanitise the personal context completely
+- Retain and surface only the delivery risk or impact
+- Do not reference the underlying HR situation in any form
+- Frame the delivery impact in neutral, professional terms such as "a resource dependency exists on this workstream" or "capacity risk identified"
 
 Important:
 - Do NOT over-generalise
@@ -52,6 +61,9 @@ Style guidelines:
 - Avoid filler phrases (e.g. "it was discussed that", "the team mentioned")
 - Prioritise clarity over completeness
 - Write outputs that could be used directly with minimal editing
+- Always generate output in English regardless of the language of the input
+- If the input is in a language other than English, translate delivery content accurately before generating the output
+- Do not mix languages within the output
 - Use UK English spelling throughout (e.g. "catalogue" not "catalog", "organisation" not "organization")`;
 
 const STAKEHOLDER_UPDATE_INTERNAL_PROMPT: PromptDefinition = {
@@ -83,9 +95,36 @@ Instructions:
 - Prioritise accuracy and restraint over completeness
 - Only include items that are explicitly stated or clearly implied as a direct consequence
 - Do not infer or invent content beyond what is explicitly stated or strongly implied in the transcript
+- If the input is unstructured or lacks clear formatting, identify delivery content by meaning and context rather than structure
+- Do not skip or omit delivery content solely because it is poorly formatted
+- Do not over-extract by treating every sentence as a delivery point
+- If the input is already a well-structured and polished update, preserve its meaning and quality
+- Do not reformat or rewrite polished input into something of lesser quality
+- Do not add sections, headings, or content that were not present or implied in the original
+- If the input contains content relating to more than one project or workstream, keep content from each project clearly separate
+- Do not blend progress, risks, actions, or decisions across different projects
+- Do not misattribute content from one project to another
+- If separation cannot be maintained reliably, note that the input appears to cover multiple projects and output should be generated per project separately
+- Preserve all specific dates and deadlines exactly as stated in the input
+- Do not generalise, remove, or alter dates
+- Do not infer or fabricate dates that are not explicitly stated
+- If no delivery-focused content is found in the input, return only the following: "No delivery content identified from this input."
+- Do not generate content to avoid returning an empty response
+- If the input reflects a programme-level meeting covering multiple dependent projects, maintain clarity across interdependencies
+- Do not collapse programme-level complexity into vague generalisations
+- Clearly attribute risks, decisions, and actions to the relevant project or workstream where identifiable
+- Do not blend cross-project content into single statements that lose their meaning
+- If the input contains only one or two delivery-relevant points, reflect only those points in the output
+- Do not inflate sparse content into a fuller output than the input warrants
+- Do not reach for non-delivery content to compensate for sparse delivery content
+- A short output that accurately reflects sparse input is correct behaviour
 - Ensure outputs feel concise, credible, decision-oriented, and like internal communication rather than a polished external report
 - In Progress / Achievements, include only tangible, meaningful positive forward movement, completed work, or work that is on track
 - Ensure Progress / Achievements includes at least one or two meaningful indicators of actual delivery progress where the transcript supports it
+- If no meaningful delivery progress is present in the input, do not fabricate positive content to fill the section
+- Do not use weak filler such as "teams remained engaged" or "work continued as planned"
+- If no genuine progress exists, state: "No significant progress to report this period."
+- Do not omit the section entirely as its absence may cause formatting issues
 - Do not include delays, risks, or negative framing in Progress / Achievements
 - Focus Progress / Achievements on concrete outcomes or completed steps
 - Prefer concrete indicators of work completed or advanced, such as planning completed, preparation underway, or milestones advanced
@@ -114,6 +153,9 @@ Instructions:
 - In Risks / Issues, reference specific likely impacts such as UAT start, testing timelines, or delivery dates
 - In Decisions Required, use decisive, action-oriented language such as "agree whether to adjust timelines" or "confirm approach to"
 - Ensure Decisions Required feels like a real escalation point
+- If a decision was discussed but not concluded, surface it as a decision required rather than a concluded decision
+- Do not fabricate a conclusion that was not reached in the input
+- Frame inconclusive decisions as "Confirm approach to..." or "Agree whether to..." rather than stating an outcome
 - Prefer active, outcome-oriented language over passive phrasing
 - Reduce verbosity and do not expand points into longer or more complex sentences than necessary
 - Do not add new risks, issues, dependencies, or actions unless they are clearly grounded in the transcript
@@ -122,6 +164,9 @@ Instructions:
 - Focus only on content that directly reflects delivery progress, risks, decisions, or outcomes
 - Avoid generic or filler wording
 - Ensure outputs feel like something a senior PM would send with minimal or no editing
+- Retain delivery-relevant financial context such as budget risk, forecast changes, or cost impacts where they affect delivery outcomes
+- Sanitise specific figures conservatively — replace exact amounts with directional language such as "forecast overspend" or "budget risk identified" only if figures appear sensitive
+- Do not remove financial context that is directly relevant to delivery decisions or stakeholder awareness
 - Maintain useful detail after sanitisation`
 };
 
@@ -153,12 +198,39 @@ Instructions:
 - Prioritise accuracy and restraint over completeness
 - Only include items that are explicitly stated or clearly implied as a direct consequence
 - Do not infer or invent content beyond what is explicitly stated or strongly implied in the transcript
+- If the input is unstructured or lacks clear formatting, identify delivery content by meaning and context rather than structure
+- Do not skip or omit delivery content solely because it is poorly formatted
+- Do not over-extract by treating every sentence as a delivery point
+- If the input is already a well-structured and polished update, preserve its meaning and quality
+- Do not reformat or rewrite polished input into something of lesser quality
+- Do not add sections, headings, or content that were not present or implied in the original
+- If the input contains content relating to more than one project or workstream, keep content from each project clearly separate
+- Do not blend progress, risks, actions, or decisions across different projects
+- Do not misattribute content from one project to another
+- If separation cannot be maintained reliably, note that the input appears to cover multiple projects and output should be generated per project separately
+- Preserve all specific dates and deadlines exactly as stated in the input
+- Do not generalise, remove, or alter dates
+- Do not infer or fabricate dates that are not explicitly stated
+- If no delivery-focused content is found in the input, return only the following: "No delivery content identified from this input."
+- Do not generate content to avoid returning an empty response
+- If the input reflects a programme-level meeting covering multiple dependent projects, maintain clarity across interdependencies
+- Do not collapse programme-level complexity into vague generalisations
+- Clearly attribute risks, decisions, and actions to the relevant project or workstream where identifiable
+- Do not blend cross-project content into single statements that lose their meaning
+- If the input contains only one or two delivery-relevant points, reflect only those points in the output
+- Do not inflate sparse content into a fuller output than the input warrants
+- Do not reach for non-delivery content to compensate for sparse delivery content
+- A short output that accurately reflects sparse input is correct behaviour
 - Frame risks carefully but transparently
 - Present risks in a controlled, measured way
 - Clearly link risks to specific potential impacts such as UAT start or delivery milestones
 - Emphasise delivery status, risks to milestones, and expected outcomes
 - Focus on outcomes over activity, including progress made, current position, and what happens next
 - Maintain clear forward momentum and avoid sounding stalled or blocked
+- If no meaningful delivery progress is present in the input, do not fabricate positive content to fill the section
+- Do not use weak filler such as "teams remained engaged" or "work continued as planned"
+- If no genuine progress exists, state: "No significant progress to report this period."
+- Do not omit the section entirely as its absence may cause formatting issues
 - Do not include internal operational details such as team capacity, resource constraints, or internal workload
 - Do not refer to internal workload, team capacity, resource constraints, QA workload, or team stretch
 - Replace internal delivery language with outcome-focused statements about progress, timelines, or delivery position
@@ -175,6 +247,10 @@ Instructions:
 - Focus only on content that directly reflects delivery progress, risks, decisions, or outcomes
 - Avoid over-explaining or adding unnecessary commentary
 - Avoid sounding reactive, defensive, or overly detailed
+- Retain delivery-relevant financial context such as budget risk, forecast changes, or cost impacts where they affect delivery outcomes
+- Sanitise specific figures conservatively — replace exact amounts with directional language such as "forecast overspend" or "budget risk identified" only if figures appear sensitive
+- Do not remove financial context that is directly relevant to delivery decisions or stakeholder awareness
+- For external updates, do not include internal budget figures or organisational financial detail
 - Maintain useful detail after sanitisation`
 };
 
@@ -197,6 +273,29 @@ Instructions:
 - Only include actions that are explicitly stated or clearly follow-up tasks
 - Only include items that are explicitly stated or clearly implied as a direct consequence
 - Do not infer or invent content beyond what is explicitly stated or strongly implied in the transcript
+- If the input is unstructured or lacks clear formatting, identify delivery content by meaning and context rather than structure
+- Do not skip or omit delivery content solely because it is poorly formatted
+- Do not over-extract by treating every sentence as a delivery point
+- If the input is already a well-structured and polished update, preserve its meaning and quality
+- Do not reformat or rewrite polished input into something of lesser quality
+- Do not add sections, headings, or content that were not present or implied in the original
+- If the input contains content relating to more than one project or workstream, keep content from each project clearly separate
+- Do not blend progress, risks, actions, or decisions across different projects
+- Do not misattribute content from one project to another
+- If separation cannot be maintained reliably, note that the input appears to cover multiple projects and output should be generated per project separately
+- Preserve all specific dates and deadlines exactly as stated in the input
+- Do not generalise, remove, or alter dates
+- Do not infer or fabricate dates that are not explicitly stated
+- If no clear delivery-focused actions are found, return only the following: "No delivery actions identified from this input."
+- Do not generate actions to avoid returning an empty response
+- If the input reflects a programme-level meeting covering multiple dependent projects, maintain clarity across interdependencies
+- Do not collapse programme-level complexity into vague generalisations
+- Clearly attribute risks, decisions, and actions to the relevant project or workstream where identifiable
+- Do not blend cross-project content into single statements that lose their meaning
+- If the input contains only one or two delivery-relevant points, reflect only those points in the output
+- Do not inflate sparse content into a fuller output than the input warrants
+- Do not reach for non-delivery content to compensate for sparse delivery content
+- A short output that accurately reflects sparse input is correct behaviour
 - Treat actions as explicitly stated follow-ups, clearly agreed next steps, or new tasks arising from the meeting
 - Do not treat updates on work already in progress, known issues being worked on, ongoing tracked tasks, or status descriptions as actions
 - If an item is simply describing current work or status, do not convert it into an action
@@ -240,6 +339,9 @@ Instructions:
 - Prioritise accuracy and credibility over completeness
 - Only include actions that add real value beyond what is already being tracked
 - If a senior PM would not create a new task for it, do not include it
+- If a decision was discussed but not concluded, surface it as a decision required rather than a concluded decision
+- Do not fabricate a conclusion that was not reached in the input
+- Frame inconclusive decisions as "Confirm approach to..." or "Agree whether to..." rather than stating an outcome
 - Do not include actions related to reporting admin, folder management, file organisation, or process housekeeping
 - Do not include actions that exist solely to support internal reporting or administrative processes rather than project delivery
 - Focus only on actions that directly advance or protect delivery outcomes
@@ -261,6 +363,29 @@ Instructions:
 - Limit output to 2-3 short sentences maximum
 - If the source input is already concise and structured, do not expand it
 - The output should usually be equal length or shorter than the source unless extra clarity is genuinely needed
+- If the input is unstructured or lacks clear formatting, identify delivery content by meaning and context rather than structure
+- Do not skip or omit delivery content solely because it is poorly formatted
+- Do not over-extract by treating every sentence as a delivery point
+- If the input is already a well-structured and polished update, preserve its meaning and quality
+- Do not reformat or rewrite polished input into something of lesser quality
+- Do not add sections, headings, or content that were not present or implied in the original
+- If the input contains content relating to more than one project or workstream, keep content from each project clearly separate
+- Do not blend progress, risks, actions, or decisions across different projects
+- Do not misattribute content from one project to another
+- If separation cannot be maintained reliably, note that the input appears to cover multiple projects and output should be generated per project separately
+- Preserve all specific dates and deadlines exactly as stated in the input
+- Do not generalise, remove, or alter dates
+- Do not infer or fabricate dates that are not explicitly stated
+- If no delivery-focused content is found in the input, return only the following: "No delivery content identified from this input."
+- Do not generate content to avoid returning an empty response
+- If the input reflects a programme-level meeting covering multiple dependent projects, maintain clarity across interdependencies
+- Do not collapse programme-level complexity into vague generalisations
+- Clearly attribute risks, decisions, and actions to the relevant project or workstream where identifiable
+- Do not blend cross-project content into single statements that lose their meaning
+- If the input contains only one or two delivery-relevant points, reflect only those points in the output
+- Do not inflate sparse content into a fuller output than the input warrants
+- Do not reach for non-delivery content to compensate for sparse delivery content
+- A short output that accurately reflects sparse input is correct behaviour
 - Avoid long or complex sentence structures
 - Keep each sentence focused and concise
 - Ensure all statements are directly supported by the input
@@ -306,6 +431,9 @@ Instructions:
 - End with a clear, specific next focus
 - Avoid fluff or generic language
 - Ensure it sounds credible and realistic
+- Retain delivery-relevant financial context such as budget risk, forecast changes, or cost impacts where they affect delivery outcomes
+- Sanitise specific figures conservatively — replace exact amounts with directional language such as "forecast overspend" or "budget risk identified" only if figures appear sensitive
+- Do not remove financial context that is directly relevant to delivery decisions or stakeholder awareness
 - Maintain useful detail after sanitisation
 - Do not include content related to reporting admin, folder management, file organisation, or process housekeeping
 - Do not include content that exists solely to support internal reporting or administrative processes rather than project delivery
