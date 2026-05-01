@@ -87,6 +87,22 @@ describe("classifyContent", () => {
     await expect(classifyContent("Confirm revised vendor delivery date")).resolves.toBe(true);
     await expect(classifyContent("Update the spreadsheet before Friday")).resolves.toBe(false);
   });
+
+  it("sends max_output_tokens in the OpenAI classifier request body", async () => {
+    const fetchMock = global.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValueOnce(createClassifierResponse("DELIVERY"));
+
+    await classifyContent("Confirm revised vendor delivery date");
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const requestBody = JSON.parse(requestInit.body as string) as {
+      max_output_tokens?: number;
+      max_tokens?: number;
+    };
+
+    expect(requestBody.max_output_tokens).toBe(10);
+    expect(requestBody.max_tokens).toBeUndefined();
+  });
 });
 
 describe("filterActionListOutput", () => {
