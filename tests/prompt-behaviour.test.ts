@@ -28,6 +28,24 @@ describe("Status Update prompt behaviour", () => {
     expect(prompt).toContain("The output should usually be equal length or shorter than the source unless extra clarity is genuinely needed");
   });
 
+  it("prepends the relevance filter before the rest of the prompt wrapper", () => {
+    expect(prompt).toContain("RELEVANCE FILTER:");
+    expect(prompt).toContain("Step 1: Filter the input before doing anything else.");
+    expect(prompt).toContain("SANITISATION LAYER:");
+    expect(prompt).toContain("Step 2: Lightly sanitise the filtered content:");
+  });
+
+  it("keeps the prompt wrapper sections in the expected order", () => {
+    const relevanceFilterIndex = prompt.indexOf("RELEVANCE FILTER:");
+    const sanitisationLayerIndex = prompt.indexOf("SANITISATION LAYER:");
+    const styleLayerIndex = prompt.indexOf("STYLE LAYER:");
+    const meetingTranscriptIndex = prompt.indexOf("Meeting transcript:");
+
+    expect(sanitisationLayerIndex).toBeGreaterThan(relevanceFilterIndex);
+    expect(styleLayerIndex).toBeGreaterThan(sanitisationLayerIndex);
+    expect(meetingTranscriptIndex).toBeGreaterThan(styleLayerIndex);
+  });
+
   it("appends any length instruction after the transcript block", () => {
     const promptWithLengthInstruction = buildGenerationPrompt({
       transcript: "Vendor sign-off remains outstanding.",
@@ -35,6 +53,9 @@ describe("Status Update prompt behaviour", () => {
       lengthInstruction: "Make the output shorter. Aim for 1-2 tight sentences maximum."
     });
 
+    const relevanceFilterIndex = promptWithLengthInstruction.indexOf("RELEVANCE FILTER:");
+    const sanitisationLayerIndex = promptWithLengthInstruction.indexOf("SANITISATION LAYER:");
+    const styleLayerIndex = promptWithLengthInstruction.indexOf("STYLE LAYER:");
     const meetingTranscriptIndex = promptWithLengthInstruction.indexOf("Meeting transcript:");
     const transcriptIndex = promptWithLengthInstruction.indexOf(
       "Vendor sign-off remains outstanding."
@@ -45,6 +66,9 @@ describe("Status Update prompt behaviour", () => {
       "Make the output shorter. Aim for 1-2 tight sentences maximum."
     );
 
+    expect(sanitisationLayerIndex).toBeGreaterThan(relevanceFilterIndex);
+    expect(styleLayerIndex).toBeGreaterThan(sanitisationLayerIndex);
+    expect(meetingTranscriptIndex).toBeGreaterThan(styleLayerIndex);
     expect(transcriptIndex).toBeGreaterThan(meetingTranscriptIndex);
     expect(additionalInstructionIndex).toBeGreaterThan(transcriptIndex);
     expect(lengthInstructionIndex).toBeGreaterThan(additionalInstructionIndex);

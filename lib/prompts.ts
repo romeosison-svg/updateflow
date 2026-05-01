@@ -12,7 +12,27 @@ type PromptDefinition = {
   body: string;
 };
 
-const SANITISATION_LAYER = `Step 1: Lightly sanitise the transcript:
+const RELEVANCE_FILTER = `Step 1: Filter the input before doing anything else.
+Retain only content directly related to project delivery and execution:
+- Work completed, in progress, or planned
+- Risks, issues, and blockers affecting delivery
+- Decisions made or required
+- Dependencies and their current status
+- Actions and owners
+
+Silently discard anything in these categories:
+- Team changes: departures, new starters, personal news, wellbeing
+- Admin and process: folder structures, naming conventions, reporting setup, tool configuration, process improvements
+- Meeting housekeeping: scheduling, attendance, logistics, introductions
+- Off-topic discussion: anything not directly affecting delivery progress or outcomes
+- Social content: celebrations, farewells, team socials, general chat
+
+Important:
+- Do not reference or acknowledge discarded content in the output
+- Generate the output as if only the retained content existed
+- If a team member departure has a direct delivery impact (e.g. they own a critical workstream), retain only the delivery impact, not the personal context`;
+
+const SANITISATION_LAYER = `Step 2: Lightly sanitise the filtered content:
 - Replace personal names with roles (e.g. "Project Manager", "Stakeholder", "Client")
 - Replace company or client names with generic terms
 - Remove highly sensitive identifiers
@@ -289,6 +309,9 @@ export function buildGenerationPrompt({
   const sanitizedTranscript = sanitiseTranscriptInput(transcript);
 
   return [
+    "RELEVANCE FILTER:",
+    RELEVANCE_FILTER,
+    "",
     "SANITISATION LAYER:",
     SANITISATION_LAYER,
     "",
