@@ -124,12 +124,16 @@ export async function classifyContent(content: string): Promise<boolean> {
     data.output_text?.trim() ||
     data.output
       ?.flatMap((item) => item.content ?? [])
-      .filter((contentItem) => contentItem.type === "output_text")
+      .filter(
+        (contentItem) => contentItem.type === "output_text" || contentItem.type === "text"
+      )
       .map((contentItem) => contentItem.text?.trim() ?? "")
       .find(Boolean) ||
     ""
   )
     ?.toUpperCase();
+
+  console.log("Classifier result for content item:", content.substring(0, 50), "→", classification);
 
   if (classification === "DELIVERY") {
     return true;
@@ -158,9 +162,9 @@ export async function filterActionListOutput(rawOutput: string): Promise<string>
   }
 
   const actionBlocks = trimmedOutput
-    .split(/(?=^\d+\.)/m)
+    .split(/\n(?=\d+\.)/m)
     .map((block) => block.trim())
-    .filter(Boolean);
+    .filter((block) => /^\d+\./.test(block));
 
   if (actionBlocks.length === 0) {
     return trimmedOutput;
