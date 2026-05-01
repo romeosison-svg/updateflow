@@ -21,6 +21,24 @@ function createClassifierResponse(text: string) {
   } as Response;
 }
 
+function createClassifierContentResponse(type: string, text: string) {
+  return {
+    ok: true,
+    json: async () => ({
+      output: [
+        {
+          content: [
+            {
+              type,
+              text
+            }
+          ]
+        }
+      ]
+    })
+  } as Response;
+}
+
 function createOpenAiResponse(payload: unknown) {
   return {
     ok: true,
@@ -41,6 +59,7 @@ describe("classifyContent", () => {
     process.env.OPENAI_API_KEY = "test-openai-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -58,6 +77,27 @@ describe("classifyContent", () => {
 
   it("returns false when the classifier responds ADMIN", async () => {
     queueClassifierResponses(["ADMIN"]);
+
+    await expect(classifyContent("Update the spreadsheet before Friday")).resolves.toBe(false);
+  });
+
+  it("parses DELIVERY from classifier content items with type text", async () => {
+    const fetchMock = global.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValueOnce(createClassifierContentResponse("text", "DELIVERY"));
+
+    await expect(classifyContent("Confirm revised vendor delivery date")).resolves.toBe(true);
+  });
+
+  it("parses DELIVERY from classifier content items with type output_text", async () => {
+    const fetchMock = global.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValueOnce(createClassifierContentResponse("output_text", "DELIVERY"));
+
+    await expect(classifyContent("Confirm revised vendor delivery date")).resolves.toBe(true);
+  });
+
+  it("parses ADMIN from classifier content items with type text", async () => {
+    const fetchMock = global.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValueOnce(createClassifierContentResponse("text", "ADMIN"));
 
     await expect(classifyContent("Update the spreadsheet before Friday")).resolves.toBe(false);
   });
@@ -103,6 +143,17 @@ describe("classifyContent", () => {
     expect(requestBody.max_output_tokens).toBe(10);
     expect(requestBody.max_tokens).toBeUndefined();
   });
+
+  it("retains content and logs an error for unexpected classifier response types", async () => {
+    const fetchMock = global.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValueOnce(createClassifierContentResponse("input_text", "DELIVERY"));
+
+    await expect(classifyContent("Confirm revised vendor delivery date")).resolves.toBe(true);
+    expect(console.error).toHaveBeenCalledWith(
+      "OpenAI classification returned an unexpected response. Retaining content item.",
+      ""
+    );
+  });
 });
 
 describe("filterActionListOutput", () => {
@@ -110,6 +161,7 @@ describe("filterActionListOutput", () => {
     process.env.OPENAI_API_KEY = "test-openai-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -230,6 +282,70 @@ describe("filterActionListOutput", () => {
     expect(result).not.toContain("2.");
   });
 
+  it("ignores leading whitespace before the first numbered action and keeps the first block as a real action", async () => {
+    const output = [
+      "",
+      "   ",
+      "1. Confirm revised vendor delivery date",
+      "   Owner: PM",
+      "   Priority: High",
+      "",
+      "2. Create a new folder for weekly reporting artefacts",
+      "   Owner: PMO",
+      "   Priority: Low"
+    ].join("\n");
+
+    queueClassifierResponses(["DELIVERY", "ADMIN"]);
+
+    const result = await filterActionListOutput(output);
+
+    expect(result.startsWith("1. Confirm revised vendor delivery date")).toBe(true);
+    expect(result).not.toContain("2.");
+    expect(result).not.toContain("Create a new folder");
+  });
+
+  it("renumbers five actions with admin actions in positions 2 and 4 down to 1, 2, 3", async () => {
+    const output = [
+      "1. Confirm revised vendor delivery date",
+      "   Owner: PM",
+      "   Priority: High",
+      "",
+      "2. Create a new folder for the reporting pack",
+      "   Owner: PMO",
+      "   Priority: Low",
+      "",
+      "3. Validate UAT readiness with QA lead",
+      "   Owner: QA Lead",
+      "   Priority: High",
+      "",
+      "4. Update the spreadsheet before Friday",
+      "   Owner: PMO",
+      "   Priority: Medium",
+      "",
+      "5. Finalise cutover communications",
+      "   Owner: Delivery Lead",
+      "   Priority: Medium"
+    ].join("\n");
+
+    queueClassifierResponses(["DELIVERY", "ADMIN", "DELIVERY", "ADMIN", "DELIVERY"]);
+
+    await expect(filterActionListOutput(output)).resolves.toBe(
+      [
+        "1. Confirm revised vendor delivery date",
+        "   Owner: PM",
+        "   Priority: High",
+        "",
+        "2. Validate UAT readiness with QA lead",
+        "   Owner: QA Lead",
+        "   Priority: High",
+        "",
+        "3. Finalise cutover communications",
+        "   Owner: Delivery Lead",
+        "   Priority: Medium"
+      ].join("\n")
+    );
+  });
+
   it("retains content rather than removing it when classification throws", async () => {
     const output = [
       "1. Update the spreadsheet with latest status",
@@ -302,6 +418,7 @@ describe("filterSectionedOutput", () => {
     process.env.OPENAI_API_KEY = "test-openai-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -414,6 +531,7 @@ describe("filterShortStatusOutput", () => {
     process.env.OPENAI_API_KEY = "test-openai-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -480,6 +598,7 @@ describe("generateText length adjustment source", () => {
     process.env.OPENAI_API_KEY = "test-openai-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
