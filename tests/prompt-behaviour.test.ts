@@ -33,6 +33,10 @@ describe("Status Update prompt behaviour", () => {
     expect(prompt).toContain("Step 1: Filter the input before doing anything else.");
     expect(prompt).toContain("SANITISATION LAYER:");
     expect(prompt).toContain("Step 2: Lightly sanitise the filtered content:");
+    expect(prompt).toContain("Silently discard anything in these categories:");
+    expect(prompt).toContain("- Team changes: departures, new starters, personal news, wellbeing");
+    expect(prompt).toContain("- Admin and process: folder structures, naming conventions, reporting setup, tool configuration, process improvements");
+    expect(prompt).toContain("- Meeting housekeeping: scheduling, attendance, logistics, introductions");
   });
 
   it("keeps the prompt wrapper sections in the expected order", () => {
@@ -73,6 +77,18 @@ describe("Status Update prompt behaviour", () => {
     expect(additionalInstructionIndex).toBeGreaterThan(transcriptIndex);
     expect(lengthInstructionIndex).toBeGreaterThan(additionalInstructionIndex);
   });
+
+  it("reinforces the delivery-only exclusions in the short status prompt body", () => {
+    expect(prompt).toContain("Do not include content related to reporting admin, folder management, file organisation, or process housekeeping");
+    expect(prompt).toContain("Do not include content that exists solely to support internal reporting or administrative processes rather than project delivery");
+    expect(prompt).toContain("Focus only on content that directly reflects delivery progress, risks, or next steps");
+  });
+
+  it("includes the UK English spelling instruction in the style layer", () => {
+    expect(prompt).toContain(
+      'Use UK English spelling throughout (e.g. "catalogue" not "catalog", "organisation" not "organization")'
+    );
+  });
 });
 
 describe("Action List prompt behaviour", () => {
@@ -95,5 +111,56 @@ describe("Action List prompt behaviour", () => {
   it("keeps numbered action list formatting", () => {
     expect(prompt).toContain("1. Action description");
     expect(prompt).toContain("Number each action sequentially as 1., 2., 3.");
+  });
+
+  it("excludes admin and reporting-process tasks from action outputs", () => {
+    expect(prompt).toContain("Do not include actions related to reporting admin, folder management, file organisation, or process housekeeping");
+    expect(prompt).toContain("Do not include actions that exist solely to support internal reporting or administrative processes rather than project delivery");
+    expect(prompt).toContain("Focus only on actions that directly advance or protect delivery outcomes");
+  });
+
+  it("inherits the relevance filter and UK English guidance", () => {
+    expect(prompt).toContain("RELEVANCE FILTER:");
+    expect(prompt).toContain("Step 1: Filter the input before doing anything else.");
+    expect(prompt).toContain(
+      'Use UK English spelling throughout (e.g. "catalogue" not "catalog", "organisation" not "organization")'
+    );
+  });
+});
+
+describe("Stakeholder Update prompt behaviour", () => {
+  const internalPrompt = buildGenerationPrompt({
+    transcript: "Folder structure updated for reporting. Delivery milestone confirmed for Friday.",
+    outputType: "stakeholder-update",
+    audience: "internal"
+  });
+
+  const externalPrompt = buildGenerationPrompt({
+    transcript: "Meeting moved by 15 minutes. Vendor delivery remains outstanding.",
+    outputType: "stakeholder-update",
+    audience: "external"
+  });
+
+  it("reinforces delivery-only exclusions for internal stakeholder updates", () => {
+    expect(internalPrompt).toContain("Do not include content related to reporting admin, folder management, file organisation, or process housekeeping");
+    expect(internalPrompt).toContain("Do not include content that exists solely to support internal reporting or administrative processes rather than project delivery");
+    expect(internalPrompt).toContain("Focus only on content that directly reflects delivery progress, risks, decisions, or outcomes");
+  });
+
+  it("reinforces delivery-only exclusions for external stakeholder updates", () => {
+    expect(externalPrompt).toContain("Do not include content related to reporting admin, folder management, file organisation, or process housekeeping");
+    expect(externalPrompt).toContain("Do not include content that exists solely to support internal reporting or administrative processes rather than project delivery");
+    expect(externalPrompt).toContain("Focus only on content that directly reflects delivery progress, risks, decisions, or outcomes");
+  });
+
+  it("applies the shared relevance filter and UK English guidance to stakeholder prompts", () => {
+    expect(internalPrompt).toContain("RELEVANCE FILTER:");
+    expect(externalPrompt).toContain("RELEVANCE FILTER:");
+    expect(internalPrompt).toContain(
+      'Use UK English spelling throughout (e.g. "catalogue" not "catalog", "organisation" not "organization")'
+    );
+    expect(externalPrompt).toContain(
+      'Use UK English spelling throughout (e.g. "catalogue" not "catalog", "organisation" not "organization")'
+    );
   });
 });
