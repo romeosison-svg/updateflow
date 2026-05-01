@@ -12,16 +12,11 @@ import {
 
 type FetchMock = ReturnType<typeof vi.fn>;
 
-function createAnthropicResponse(text: string) {
+function createClassifierResponse(text: string) {
   return {
     ok: true,
     json: async () => ({
-      content: [
-        {
-          type: "text",
-          text
-        }
-      ]
+      output_text: text
     })
   } as Response;
 }
@@ -37,13 +32,13 @@ function queueClassifierResponses(responses: Array<"DELIVERY" | "ADMIN">) {
   const fetchMock = global.fetch as unknown as FetchMock;
 
   for (const response of responses) {
-    fetchMock.mockResolvedValueOnce(createAnthropicResponse(response));
+    fetchMock.mockResolvedValueOnce(createClassifierResponse(response));
   }
 }
 
 describe("classifyContent", () => {
   beforeEach(() => {
-    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
+    process.env.OPENAI_API_KEY = "test-openai-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -51,8 +46,8 @@ describe("classifyContent", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.ANTHROPIC_MODEL;
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_MODEL;
   });
 
   it("returns true when the classifier responds DELIVERY", async () => {
@@ -74,11 +69,29 @@ describe("classifyContent", () => {
     await expect(classifyContent("Update the spreadsheet before Friday")).resolves.toBe(true);
     expect(console.error).toHaveBeenCalled();
   });
+
+  it("logs and retains content when OPENAI_API_KEY is missing", async () => {
+    delete process.env.OPENAI_API_KEY;
+
+    await expect(classifyContent("Update the spreadsheet before Friday")).resolves.toBe(true);
+    expect(console.error).toHaveBeenCalledWith(
+      "Missing OPENAI_API_KEY. Retaining content item during post-filtering."
+    );
+  });
+
+  it("matches DELIVERY and ADMIN responses case-insensitively", async () => {
+    const fetchMock = global.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValueOnce(createClassifierResponse("delivery"));
+    fetchMock.mockResolvedValueOnce(createClassifierResponse("admin"));
+
+    await expect(classifyContent("Confirm revised vendor delivery date")).resolves.toBe(true);
+    await expect(classifyContent("Update the spreadsheet before Friday")).resolves.toBe(false);
+  });
 });
 
 describe("filterActionListOutput", () => {
   beforeEach(() => {
-    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
+    process.env.OPENAI_API_KEY = "test-openai-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -86,8 +99,8 @@ describe("filterActionListOutput", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.ANTHROPIC_MODEL;
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_MODEL;
   });
 
   it("removes admin actions and renumbers remaining delivery actions starting from 1", async () => {
@@ -257,9 +270,9 @@ describe("filterActionListOutput", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
     [
-      createAnthropicResponse("DELIVERY"),
-      createAnthropicResponse("ADMIN"),
-      createAnthropicResponse("DELIVERY")
+      createClassifierResponse("DELIVERY"),
+      createClassifierResponse("ADMIN"),
+      createClassifierResponse("DELIVERY")
     ].forEach((response, index) => {
       deferredResponses[index]?.resolve(response);
     });
@@ -270,7 +283,7 @@ describe("filterActionListOutput", () => {
 
 describe("filterSectionedOutput", () => {
   beforeEach(() => {
-    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
+    process.env.OPENAI_API_KEY = "test-openai-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -278,8 +291,8 @@ describe("filterSectionedOutput", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.ANTHROPIC_MODEL;
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_MODEL;
   });
 
   it("removes admin bullets and drops sections left empty after filtering", async () => {
@@ -382,7 +395,7 @@ describe("filterSectionedOutput", () => {
 
 describe("filterShortStatusOutput", () => {
   beforeEach(() => {
-    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
+    process.env.OPENAI_API_KEY = "test-openai-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -390,8 +403,8 @@ describe("filterShortStatusOutput", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.ANTHROPIC_MODEL;
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_MODEL;
   });
 
   it("removes admin sentences and rejoins the remaining delivery status coherently", async () => {
@@ -449,7 +462,6 @@ describe("filterShortStatusOutput", () => {
 describe("generateText length adjustment source", () => {
   beforeEach(() => {
     process.env.OPENAI_API_KEY = "test-openai-key";
-    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -459,8 +471,6 @@ describe("generateText length adjustment source", () => {
     vi.unstubAllGlobals();
     delete process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_MODEL;
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.ANTHROPIC_MODEL;
   });
 
   it("uses current output as the source when shortening existing output", async () => {
@@ -470,7 +480,7 @@ describe("generateText length adjustment source", () => {
         output_text: "Shortened weekly update."
       })
     );
-    fetchMock.mockResolvedValueOnce(createAnthropicResponse("DELIVERY"));
+    fetchMock.mockResolvedValueOnce(createClassifierResponse("DELIVERY"));
 
     await generateText({
       transcript: "Original transcript content that should not be reused directly.",
@@ -496,7 +506,7 @@ describe("generateText length adjustment source", () => {
         output_text: "Expanded weekly update with more detail."
       })
     );
-    fetchMock.mockResolvedValueOnce(createAnthropicResponse("DELIVERY"));
+    fetchMock.mockResolvedValueOnce(createClassifierResponse("DELIVERY"));
 
     await generateText({
       transcript: "Original transcript content that should remain unused for this adjustment.",

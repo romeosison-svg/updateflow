@@ -3,8 +3,6 @@ import type { Audience, OutputType } from "./output";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4.1";
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const DEFAULT_CLASSIFIER_MODEL = "claude-3-5-haiku-latest";
 const NO_DELIVERY_CONTENT_MESSAGE = "No delivery content identified from this input.";
 const NO_DELIVERY_ACTIONS_MESSAGE = "No delivery actions identified from this input.";
 
@@ -58,75 +56,79 @@ type OpenAIResponse = {
   output_text?: string;
 };
 
-type AnthropicResponse = {
-  content?: Array<{
-    text?: string;
-    type?: string;
-  }>;
-  error?: {
-    message?: string;
-  };
-};
-
 export async function classifyContent(content: string): Promise<boolean> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
-    console.error("Missing ANTHROPIC_API_KEY. Retaining content item during post-filtering.");
+    console.error("Missing OPENAI_API_KEY. Retaining content item during post-filtering.");
     return true;
   }
 
   let response: Response;
 
   try {
-    response = await fetch(ANTHROPIC_API_URL, {
+    response = await fetch(OPENAI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01"
+        Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL ?? DEFAULT_CLASSIFIER_MODEL,
+        model: process.env.OPENAI_MODEL ?? DEFAULT_MODEL,
         max_tokens: 10,
-        system: CLASSIFIER_SYSTEM_PROMPT,
-        messages: [
+        input: [
+          {
+            role: "system",
+            content: [
+              {
+                type: "input_text",
+                text: CLASSIFIER_SYSTEM_PROMPT
+              }
+            ]
+          },
           {
             role: "user",
-            content
+            content: [
+              {
+                type: "input_text",
+                text: content
+              }
+            ]
           }
         ]
       })
     });
   } catch (error) {
-    console.error("Anthropic classification request failed. Retaining content item.", error);
+    console.error("OpenAI classification request failed. Retaining content item.", error);
     return true;
   }
 
-  let data: AnthropicResponse;
+  let data: OpenAIResponse;
 
   try {
-    data = (await response.json()) as AnthropicResponse;
+    data = (await response.json()) as OpenAIResponse;
   } catch (error) {
-    console.error(
-      "Anthropic classification response was unreadable. Retaining content item.",
-      error
-    );
+    console.error("OpenAI classification response was unreadable. Retaining content item.", error);
     return true;
   }
 
   if (!response.ok) {
     console.error(
-      "Anthropic classification request returned a non-OK response. Retaining content item.",
+      "OpenAI classification request returned a non-OK response. Retaining content item.",
       data.error?.message ?? response.statusText
     );
     return true;
   }
 
-  const classification = data.content
-    ?.filter((item) => item.type === "text")
-    .map((item) => item.text?.trim() ?? "")
-    .find(Boolean)
+  const classification = (
+    data.output_text?.trim() ||
+    data.output
+      ?.flatMap((item) => item.content ?? [])
+      .filter((contentItem) => contentItem.type === "output_text")
+      .map((contentItem) => contentItem.text?.trim() ?? "")
+      .find(Boolean) ||
+    ""
+  )
     ?.toUpperCase();
 
   if (classification === "DELIVERY") {
@@ -138,7 +140,7 @@ export async function classifyContent(content: string): Promise<boolean> {
   }
 
   console.error(
-    "Anthropic classification returned an unexpected response. Retaining content item.",
+    "OpenAI classification returned an unexpected response. Retaining content item.",
     classification
   );
   return true;
