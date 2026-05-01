@@ -3,42 +3,41 @@ import type { Audience, OutputType } from "./output";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4.1";
+const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const DEFAULT_CLASSIFIER_MODEL = "claude-3-5-haiku-latest";
 const NO_DELIVERY_CONTENT_MESSAGE = "No delivery content identified from this input.";
 const NO_DELIVERY_ACTIONS_MESSAGE = "No delivery actions identified from this input.";
 
-export const ADMIN_INDICATORS = [
-  "create a folder",
-  "create a new folder",
-  "folder structure",
-  "directory structure",
-  "naming convention",
-  "file organisation",
-  "file organization",
-  "update the report",
-  "update the spreadsheet",
-  "update the sheet",
-  "reporting setup",
-  "reporting process",
-  "reporting template",
-  "send an email to notify",
-  "send an email about",
-  "email the team about",
-  "archive the",
-  "housekeeping",
-  "missing from the sheet",
-  "missing from the spreadsheet",
-  "add to the sheet",
-  "add to the spreadsheet",
-  "compare the sheet",
-  "compare the spreadsheet",
-  "missing content from",
-  "older stories",
-  "march and april",
-  "revisit and update status"
-] as const;
+export const SHORTER_EXISTING_OUTPUT_INSTRUCTION = `The following is an existing output. Produce a shorter version of it. Preserve all key delivery points, risks, and decisions. Remove padding, secondary detail, and any content that is lower priority. Do not introduce new content. Do not reference the original transcript.`;
+
+export const MORE_DETAIL_EXISTING_OUTPUT_INSTRUCTION = `The following is an existing output. Produce a more detailed version of it. Expand on key points where additional context would add value. Do not introduce content that is not grounded in the existing output. Do not reference the original transcript.`;
+
+const CLASSIFIER_SYSTEM_PROMPT = `You are a classifier for a project delivery tool. Your job is to determine whether a piece of content is directly relevant to project delivery outcomes.
+
+Delivery-relevant content includes:
+- Work completed, in progress, or planned
+- Risks, issues, or blockers affecting delivery
+- Decisions made or required
+- Dependencies and their status
+- Actions that directly advance or protect delivery outcomes
+
+Non-delivery content includes:
+- Folder or file management
+- Reporting admin or process housekeeping
+- Spreadsheet or template maintenance
+- Internal email notifications about admin tasks
+- Story or ticket admin unrelated to delivery progress
+- Scheduling or attendance housekeeping
+
+Respond with a single word only: DELIVERY or ADMIN.
+Do not explain your answer.`;
+
+export type LengthAdjustmentDirection = "shorter" | "more_detail";
 
 type GenerateTextParams = {
   transcript: string;
+  currentOutput?: string;
+  lengthInstruction?: string;
   outputType: OutputType;
   audience?: Audience;
 };
@@ -59,13 +58,97 @@ type OpenAIResponse = {
   output_text?: string;
 };
 
-function containsAdminIndicator(content: string): boolean {
-  const normalisedContent = content.toLowerCase();
+type AnthropicResponse = {
+  content?: Array<{
+    text?: string;
+    type?: string;
+  }>;
+  error?: {
+    message?: string;
+  };
+};
 
-  return ADMIN_INDICATORS.some((indicator) => normalisedContent.includes(indicator));
+export async function classifyContent(content: string): Promise<boolean> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    console.error("Missing ANTHROPIC_API_KEY. Retaining content item during post-filtering.");
+    return true;
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(ANTHROPIC_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: process.env.ANTHROPIC_MODEL ?? DEFAULT_CLASSIFIER_MODEL,
+        max_tokens: 10,
+        system: CLASSIFIER_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content
+          }
+        ]
+      })
+    });
+  } catch (error) {
+    console.error("Anthropic classification request failed. Retaining content item.", error);
+    return true;
+  }
+
+  let data: AnthropicResponse;
+
+  try {
+    data = (await response.json()) as AnthropicResponse;
+  } catch (error) {
+    console.error(
+      "Anthropic classification response was unreadable. Retaining content item.",
+      error
+    );
+    return true;
+  }
+
+  if (!response.ok) {
+    console.error(
+      "Anthropic classification request returned a non-OK response. Retaining content item.",
+      data.error?.message ?? response.statusText
+    );
+    return true;
+  }
+
+  const classification = data.content
+    ?.filter((item) => item.type === "text")
+    .map((item) => item.text?.trim() ?? "")
+    .find(Boolean)
+    ?.toUpperCase();
+
+  if (classification === "DELIVERY") {
+    return true;
+  }
+
+  if (classification === "ADMIN") {
+    return false;
+  }
+
+  console.error(
+    "Anthropic classification returned an unexpected response. Retaining content item.",
+    classification
+  );
+  return true;
 }
 
-export function filterActionListOutput(rawOutput: string): string {
+async function classifyItemsInParallel(items: string[]): Promise<boolean[]> {
+  return Promise.all(items.map((item) => classifyContent(item)));
+}
+
+export async function filterActionListOutput(rawOutput: string): Promise<string> {
   const trimmedOutput = rawOutput.trim();
 
   if (trimmedOutput === NO_DELIVERY_ACTIONS_MESSAGE) {
@@ -81,18 +164,23 @@ export function filterActionListOutput(rawOutput: string): string {
     return trimmedOutput;
   }
 
-  const validBlocks = actionBlocks.filter((block) => !containsAdminIndicator(block));
+  const isDeliveryRelevant = await classifyItemsInParallel(actionBlocks);
+  const validBlocks = actionBlocks.filter((_, index) => isDeliveryRelevant[index]);
 
   if (validBlocks.length === 0) {
     return NO_DELIVERY_ACTIONS_MESSAGE;
   }
 
   return validBlocks
-    .map((block, index) => block.replace(/^\d+\./, `${index + 1}.`).trim())
+    .map((block, index) => {
+      const actionNumber = index + 1;
+
+      return block.replace(/^\d+\./, `${actionNumber}.`).trim();
+    })
     .join("\n\n");
 }
 
-export function filterSectionedOutput(rawOutput: string): string {
+export async function filterSectionedOutput(rawOutput: string): Promise<string> {
   const trimmedOutput = rawOutput.trim();
 
   if (trimmedOutput === NO_DELIVERY_CONTENT_MESSAGE) {
@@ -126,21 +214,26 @@ export function filterSectionedOutput(rawOutput: string): string {
   }
 
   if (sections.length === 0) {
-    const filteredLines = lines.filter((line) => {
-      const trimmedLine = line.trim();
-
-      return trimmedLine && !containsAdminIndicator(trimmedLine);
-    });
+    const nonEmptyLines = lines.map((line) => line.trim()).filter(Boolean);
+    const isDeliveryRelevant = await classifyItemsInParallel(nonEmptyLines);
+    const filteredLines = nonEmptyLines.filter((_, index) => isDeliveryRelevant[index]);
 
     return filteredLines.length > 0
       ? filteredLines.join("\n")
       : NO_DELIVERY_CONTENT_MESSAGE;
   }
 
+  const allBullets = sections.flatMap((section) => section.bullets);
+  const isDeliveryRelevant = await classifyItemsInParallel(allBullets);
+  let bulletIndex = 0;
   const filteredSections = sections
     .map((section) => ({
       heading: section.heading,
-      bullets: section.bullets.filter((bullet) => !containsAdminIndicator(bullet))
+      bullets: section.bullets.filter(() => {
+        const keep = isDeliveryRelevant[bulletIndex];
+        bulletIndex += 1;
+        return keep;
+      })
     }))
     .filter((section) => section.bullets.length > 0);
 
@@ -153,7 +246,7 @@ export function filterSectionedOutput(rawOutput: string): string {
     .join("\n\n");
 }
 
-export function filterShortStatusOutput(rawOutput: string): string {
+export async function filterShortStatusOutput(rawOutput: string): Promise<string> {
   const trimmedOutput = rawOutput.trim();
 
   if (trimmedOutput === NO_DELIVERY_CONTENT_MESSAGE) {
@@ -168,7 +261,8 @@ export function filterShortStatusOutput(rawOutput: string): string {
     return trimmedOutput;
   }
 
-  const filteredSentences = sentences.filter((sentence) => !containsAdminIndicator(sentence));
+  const isDeliveryRelevant = await classifyItemsInParallel(sentences);
+  const filteredSentences = sentences.filter((_, index) => isDeliveryRelevant[index]);
 
   if (filteredSentences.length === 0) {
     return NO_DELIVERY_CONTENT_MESSAGE;
@@ -177,7 +271,7 @@ export function filterShortStatusOutput(rawOutput: string): string {
   return filteredSentences.join(" ").trim();
 }
 
-function filterGeneratedOutput(output: string, outputType: OutputType): string {
+async function filterGeneratedOutput(output: string, outputType: OutputType): Promise<string> {
   switch (outputType) {
     case "action-list":
       return filterActionListOutput(output);
@@ -190,6 +284,8 @@ function filterGeneratedOutput(output: string, outputType: OutputType): string {
 
 export async function generateText({
   transcript,
+  currentOutput,
+  lengthInstruction,
   outputType,
   audience
 }: GenerateTextParams): Promise<string> {
@@ -200,9 +296,10 @@ export async function generateText({
   }
 
   const prompt = buildGenerationPrompt({
-    transcript,
+    transcript: (currentOutput?.trim() || transcript).trim(),
     outputType,
-    audience
+    audience,
+    lengthInstruction
   });
 
   let response: Response;

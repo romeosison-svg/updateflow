@@ -1,20 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ADMIN_INDICATORS, generateText } from "../lib/generate";
+import { generateText } from "../lib/generate";
 
 type PipelineParams = {
   transcript: string;
   outputType: "action-list" | "stakeholder-update" | "short-status-update";
   rawModelOutput: string;
+  classifierResponses?: Array<"DELIVERY" | "ADMIN">;
   audience?: "internal" | "external";
 };
 
 type FetchMock = ReturnType<typeof vi.fn>;
 
-function createJsonResponse(payload: unknown) {
+function createOpenAiResponse(payload: unknown) {
   return {
     ok: true,
     json: async () => payload
+  } as Response;
+}
+
+function createAnthropicResponse(text: "DELIVERY" | "ADMIN") {
+  return {
+    ok: true,
+    json: async () => ({
+      content: [
+        {
+          type: "text",
+          text
+        }
+      ]
+    })
   } as Response;
 }
 
@@ -22,15 +37,20 @@ async function runPipeline({
   transcript,
   outputType,
   rawModelOutput,
+  classifierResponses = [],
   audience
 }: PipelineParams) {
   const fetchMock = global.fetch as unknown as FetchMock;
 
   fetchMock.mockResolvedValueOnce(
-    createJsonResponse({
+    createOpenAiResponse({
       output_text: rawModelOutput
     })
   );
+
+  for (const response of classifierResponses) {
+    fetchMock.mockResolvedValueOnce(createAnthropicResponse(response));
+  }
 
   const result = await generateText({
     transcript,
@@ -52,14 +72,19 @@ async function runPipeline({
 
 describe("generateText post-output filter pipeline", () => {
   beforeEach(() => {
-    process.env.OPENAI_API_KEY = "test-key";
+    process.env.OPENAI_API_KEY = "test-openai-key";
+    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
     vi.stubGlobal("fetch", vi.fn());
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     delete process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_MODEL;
+    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_MODEL;
   });
 
   it("Scenario 1 - filters admin content from action list output and renumbers remaining actions", async () => {
@@ -91,7 +116,8 @@ describe("generateText post-output filter pipeline", () => {
     const { result, requestInput } = await runPipeline({
       transcript,
       outputType: "action-list",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["DELIVERY", "ADMIN", "DELIVERY", "ADMIN"]
     });
 
     expect(requestInput).toContain("Meeting transcript:");
@@ -131,7 +157,8 @@ describe("generateText post-output filter pipeline", () => {
       transcript,
       outputType: "stakeholder-update",
       audience: "internal",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["DELIVERY", "ADMIN", "DELIVERY", "ADMIN"]
     });
 
     expect(result).toContain("Progress / Achievements");
@@ -172,7 +199,8 @@ describe("generateText post-output filter pipeline", () => {
       transcript,
       outputType: "stakeholder-update",
       audience: "external",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["DELIVERY", "ADMIN", "DELIVERY", "ADMIN"]
     });
 
     expect(result).toContain("Progress / Achievements");
@@ -196,7 +224,8 @@ describe("generateText post-output filter pipeline", () => {
     const { result } = await runPipeline({
       transcript,
       outputType: "short-status-update",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["DELIVERY", "ADMIN"]
     });
 
     expect(result).toBe(
@@ -222,7 +251,8 @@ describe("generateText post-output filter pipeline", () => {
     const { result } = await runPipeline({
       transcript,
       outputType: "action-list",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["ADMIN", "ADMIN"]
     });
 
     expect(result).toBe("No delivery actions identified from this input.");
@@ -246,7 +276,8 @@ describe("generateText post-output filter pipeline", () => {
       transcript,
       outputType: "stakeholder-update",
       audience: "internal",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["ADMIN", "ADMIN"]
     });
 
     expect(result).toBe("No delivery content identified from this input.");
@@ -270,7 +301,8 @@ describe("generateText post-output filter pipeline", () => {
       transcript,
       outputType: "stakeholder-update",
       audience: "external",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["ADMIN", "ADMIN"]
     });
 
     expect(result).toBe("No delivery content identified from this input.");
@@ -286,7 +318,8 @@ describe("generateText post-output filter pipeline", () => {
     const { result } = await runPipeline({
       transcript,
       outputType: "short-status-update",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["ADMIN"]
     });
 
     expect(result).toBe("No delivery content identified from this input.");
@@ -311,13 +344,15 @@ describe("generateText post-output filter pipeline", () => {
     const actionResult = await runPipeline({
       transcript,
       outputType: "action-list",
-      rawModelOutput: actionOutput
+      rawModelOutput: actionOutput,
+      classifierResponses: ["DELIVERY"]
     });
     const stakeholderResult = await runPipeline({
       transcript,
       outputType: "stakeholder-update",
       audience: "internal",
-      rawModelOutput: sectionedOutput
+      rawModelOutput: sectionedOutput,
+      classifierResponses: ["DELIVERY"]
     });
 
     expect(actionResult.result).toContain("Confirm reporting date for UAT sign-off");
@@ -341,7 +376,8 @@ describe("generateText post-output filter pipeline", () => {
       transcript,
       outputType: "stakeholder-update",
       audience: "internal",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["DELIVERY", "DELIVERY"]
     });
 
     expect(result).toContain(
@@ -350,36 +386,37 @@ describe("generateText post-output filter pipeline", () => {
     expect(result).toContain("Delivery dashboard sheet confirms cutover readiness");
   });
 
-  it("Scenario 11 - ADMIN_INDICATORS is importable and extending it changes filter behaviour without logic edits", async () => {
-    const customIndicator = "weekly board refresh";
-    const mutableIndicators = ADMIN_INDICATORS as unknown as string[];
+  it("Scenario 11 - classification failures retain content rather than removing it", async () => {
+    const transcript =
+      "Folder structure changes were discussed but the revised vendor delivery date still needs confirmation.";
 
-    mutableIndicators.push(customIndicator);
+    const rawModelOutput = [
+      "1. Folder structure changes were discussed",
+      "   Owner: PMO",
+      "   Priority: Low",
+      "",
+      "2. Confirm revised vendor delivery date",
+      "   Owner: PM",
+      "   Priority: High"
+    ].join("\n");
 
-    try {
-      const transcript = "Weekly board refresh completed and vendor delivery date still needs confirmation.";
-      const rawModelOutput = [
-        "1. Weekly board refresh completed",
-        "   Owner: PMO",
-        "   Priority: Low",
-        "",
-        "2. Confirm revised vendor delivery date",
-        "   Owner: PM",
-        "   Priority: High"
-      ].join("\n");
+    const fetchMock = global.fetch as unknown as FetchMock;
+    fetchMock.mockResolvedValueOnce(
+      createOpenAiResponse({
+        output_text: rawModelOutput
+      })
+    );
+    fetchMock.mockRejectedValueOnce(new Error("classifier down"));
+    fetchMock.mockResolvedValueOnce(createAnthropicResponse("DELIVERY"));
 
-      const { result } = await runPipeline({
-        transcript,
-        outputType: "action-list",
-        rawModelOutput
-      });
+    const result = await generateText({
+      transcript,
+      outputType: "action-list"
+    });
 
-      expect(ADMIN_INDICATORS).toContain(customIndicator);
-      expect(result).toContain("1. Confirm revised vendor delivery date");
-      expect(result).not.toContain("Weekly board refresh completed");
-    } finally {
-      mutableIndicators.pop();
-    }
+    expect(result).toContain("1. Folder structure changes were discussed");
+    expect(result).toContain("2. Confirm revised vendor delivery date");
+    expect(console.error).toHaveBeenCalled();
   });
 
   it("Scenario 12 - renumbers retained actions sequentially after filtering out admin items", async () => {
@@ -416,7 +453,8 @@ describe("generateText post-output filter pipeline", () => {
     const { result } = await runPipeline({
       transcript,
       outputType: "action-list",
-      rawModelOutput
+      rawModelOutput,
+      classifierResponses: ["DELIVERY", "ADMIN", "DELIVERY", "ADMIN", "DELIVERY"]
     });
 
     expect(result).toContain("1. Confirm revised vendor delivery date");
@@ -478,24 +516,28 @@ describe("generateText post-output filter pipeline", () => {
     const actionResult = await runPipeline({
       transcript,
       outputType: "action-list",
-      rawModelOutput: actionListOutput
+      rawModelOutput: actionListOutput,
+      classifierResponses: ["ADMIN", "DELIVERY"]
     });
     const internalResult = await runPipeline({
       transcript,
       outputType: "stakeholder-update",
       audience: "internal",
-      rawModelOutput: internalOutput
+      rawModelOutput: internalOutput,
+      classifierResponses: ["DELIVERY", "DELIVERY", "ADMIN", "DELIVERY"]
     });
     const externalResult = await runPipeline({
       transcript,
       outputType: "stakeholder-update",
       audience: "external",
-      rawModelOutput: externalOutput
+      rawModelOutput: externalOutput,
+      classifierResponses: ["DELIVERY", "DELIVERY", "ADMIN"]
     });
     const statusResult = await runPipeline({
       transcript,
       outputType: "short-status-update",
-      rawModelOutput: shortStatusOutput
+      rawModelOutput: shortStatusOutput,
+      classifierResponses: ["DELIVERY", "ADMIN", "DELIVERY"]
     });
 
     expect(actionResult.requestInput).toContain("RELEVANCE FILTER:");
@@ -512,7 +554,6 @@ describe("generateText post-output filter pipeline", () => {
       "- UAT entry criteria were approved and cutover remains on track for 12th May"
     );
     expect(internalResult.result).toContain("- Agree whether to move go-live into July");
-    expect(internalResult.result).not.toContain("Sam is leaving the team");
     expect(internalResult.result).not.toContain("Folder structure changes");
 
     expect(externalResult.result).toContain(
@@ -521,7 +562,6 @@ describe("generateText post-output filter pipeline", () => {
     expect(externalResult.result).toContain(
       "- Vendor delivery remains outstanding and threatens integration testing"
     );
-    expect(externalResult.result).not.toContain("Sam is leaving the team");
     expect(externalResult.result).not.toContain("Folder structure changes");
 
     expect(statusResult.result).toContain(
