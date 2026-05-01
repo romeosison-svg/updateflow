@@ -51,7 +51,8 @@ Style guidelines:
 - Be specific and concrete, not vague
 - Avoid filler phrases (e.g. "it was discussed that", "the team mentioned")
 - Prioritise clarity over completeness
-- Write outputs that could be used directly with minimal editing`;
+- Write outputs that could be used directly with minimal editing
+- Use UK English spelling throughout (e.g. "catalogue" not "catalog", "organisation" not "organization")`;
 
 const STAKEHOLDER_UPDATE_INTERNAL_PROMPT: PromptDefinition = {
   label: "Stakeholder Update (Internal)",
