@@ -19,16 +19,11 @@ function createOpenAiResponse(payload: unknown) {
   } as Response;
 }
 
-function createAnthropicResponse(text: "DELIVERY" | "ADMIN") {
+function createClassifierResponse(text: "DELIVERY" | "ADMIN") {
   return {
     ok: true,
     json: async () => ({
-      content: [
-        {
-          type: "text",
-          text
-        }
-      ]
+      output_text: text
     })
   } as Response;
 }
@@ -49,7 +44,7 @@ async function runPipeline({
   );
 
   for (const response of classifierResponses) {
-    fetchMock.mockResolvedValueOnce(createAnthropicResponse(response));
+    fetchMock.mockResolvedValueOnce(createClassifierResponse(response));
   }
 
   const result = await generateText({
@@ -73,7 +68,6 @@ async function runPipeline({
 describe("generateText post-output filter pipeline", () => {
   beforeEach(() => {
     process.env.OPENAI_API_KEY = "test-openai-key";
-    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
     vi.stubGlobal("fetch", vi.fn());
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -83,8 +77,6 @@ describe("generateText post-output filter pipeline", () => {
     vi.unstubAllGlobals();
     delete process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_MODEL;
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.ANTHROPIC_MODEL;
   });
 
   it("Scenario 1 - filters admin content from action list output and renumbers remaining actions", async () => {
@@ -407,7 +399,7 @@ describe("generateText post-output filter pipeline", () => {
       })
     );
     fetchMock.mockRejectedValueOnce(new Error("classifier down"));
-    fetchMock.mockResolvedValueOnce(createAnthropicResponse("DELIVERY"));
+    fetchMock.mockResolvedValueOnce(createClassifierResponse("DELIVERY"));
 
     const result = await generateText({
       transcript,
