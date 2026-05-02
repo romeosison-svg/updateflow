@@ -7,15 +7,35 @@ const pageSource = readFileSync(
   "utf8"
 );
 
-describe("tool page delivery filter toggle wiring", () => {
-  it("renders Default and Delivery only toggle labels in the optional output card section", () => {
-    expect(pageSource).toContain("handleSetOptionalOutputMode(card.key, \"default\")");
-    expect(pageSource).toContain("handleSetOptionalOutputMode(card.key, \"delivery\")");
-    expect(pageSource).toContain("Default");
-    expect(pageSource).toContain("Delivery only");
+describe("tool page split editor redesign wiring", () => {
+  it("adds local activeTab state for weekly, actions, internal, and external tabs", () => {
+    expect(pageSource).toContain('const [activeTab, setActiveTab] = useState<ActiveTab>("weekly")');
+    expect(pageSource).toContain('type ActiveTab = "weekly" | "actions" | "internal" | "external"');
   });
 
-  it("wires delivery filter analytics events with product-facing output_type values", () => {
+  it("renders the four document tabs and wires tab switching locally", () => {
+    expect(pageSource).toContain("Weekly update");
+    expect(pageSource).toContain("Action list");
+    expect(pageSource).toContain("Internal");
+    expect(pageSource).toContain("External");
+    expect(pageSource).toContain('onClick={() => setActiveTab("weekly")}');
+    expect(pageSource).toContain('onClick={() => setActiveTab("actions")}');
+    expect(pageSource).toContain('onClick={() => setActiveTab("internal")}');
+    expect(pageSource).toContain('onClick={() => setActiveTab("external")}');
+  });
+
+  it("keeps weekly update handlers and events reachable from the redesigned toolbar", () => {
+    expect(pageSource).toContain("handleSubmit");
+    expect(pageSource).toContain('handleAdjustWeeklyUpdateLength(mode)');
+    expect(pageSource).toContain("handleResetToDefault()");
+    expect(pageSource).toContain("generate_weekly_update");
+    expect(pageSource).toContain("LENGTH_ADJUSTED_EVENT");
+    expect(pageSource).toContain("RESET_TO_DEFAULT_EVENT");
+  });
+
+  it("keeps delivery filter toggles and PostHog wiring for optional outputs", () => {
+    expect(pageSource).toContain('handleSetOptionalOutputMode("actionList", "default")');
+    expect(pageSource).toContain('handleSetOptionalOutputMode("actionList", "delivery")');
     expect(pageSource).toContain('"delivery_filter_applied"');
     expect(pageSource).toContain('"delivery_filter_removed"');
     expect(pageSource).toContain('"action_list"');
@@ -23,29 +43,30 @@ describe("tool page delivery filter toggle wiring", () => {
     expect(pageSource).toContain('"external_update"');
   });
 
-  it("keeps weekly update controls separate from the delivery filter toggles", () => {
-    expect(pageSource).toContain('handleAdjustWeeklyUpdateLength("shorter")');
-    expect(pageSource).toContain('handleAdjustWeeklyUpdateLength("more_detail")');
-    expect(pageSource).toContain("handleResetToDefault");
-    expect(pageSource).not.toContain('handleSetOptionalOutputMode(card.key, "delivery")}\n                      disabled={isWeeklyUpdateLoading');
+  it("includes per-tab empty state placeholders", () => {
+    expect(pageSource).toContain("Your weekly update will appear here.");
+    expect(pageSource).toContain("Your action list will appear here.");
+    expect(pageSource).toContain("Your internal update will appear here.");
+    expect(pageSource).toContain("Your external update will appear here.");
   });
 
-  it("uses per-card cached default and delivery outputs with explicit activeMode state", () => {
-    expect(pageSource).toContain('activeMode: "default"');
-    expect(pageSource).toContain("defaultOutput: string");
-    expect(pageSource).toContain("deliveryOutput: string | null");
-    expect(pageSource).toContain('cardState.activeMode === "delivery" && cardState.deliveryOutput');
+  it("keeps the action output card title as Actions while preserving the Action List trigger label", () => {
+    expect(pageSource).toContain('buttonLabel: "Action List"');
+    expect(pageSource).toContain('cardTitle: "Actions"');
   });
 
-  it("shows loading and error messaging in the toggle area only for delivery mode preparation", () => {
-    expect(pageSource).toContain("Preparing Delivery only...");
-    expect(pageSource).toContain("Delivery only is unavailable right now.");
-    expect(pageSource).toContain("pendingMode: \"delivery\"");
-    expect(pageSource).toContain("showDeliveryError");
+  it("adds the mobile single-column split layout and horizontally scrollable tab strip", () => {
+    expect(pageSource).toContain("mobile:flex mobile:flex-col");
+    expect(pageSource).toContain("overflow-x-auto");
+    expect(pageSource).toContain("mobile:whitespace-nowrap");
+    expect(pageSource).toContain("[&::-webkit-scrollbar]:hidden");
   });
 
-  it("treats pressing the already-active button as a no-op", () => {
-    expect(pageSource).toContain("if (cardState.activeMode === mode) {");
-    expect(pageSource).toContain("return;");
+  it("adds the mobile-only add-to-your-pack controls so optional-output handlers stay reachable", () => {
+    expect(pageSource).toContain("Add to your pack");
+    expect(pageSource).toContain("hidden border-t border-border-line px-4 py-5 mobile:block");
+    expect(pageSource).toContain("handleGenerateActionList()");
+    expect(pageSource).toContain('handleGenerateOptionalOutput("internalUpdate", "the internal update")');
+    expect(pageSource).toContain('handleGenerateOptionalOutput("externalUpdate", "the external update")');
   });
 });

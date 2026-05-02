@@ -7,19 +7,36 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        accent: "#0d7377",
-        "accent-hover": "#0a5f63",
-        "accent-light": "#e8f4f5",
-        bg: "#f0f3f6",
-        card: "#ffffff",
-        text: "#1a2332",
-        muted: "#5c6b7a",
-        border: "#e2e7ec",
-        error: "#dc2626"
+        ink: "#0E1411",
+        line: "#E2DCD2",
+        "bg-paper": "#F4F1EC",
+        "bg-surface": "#FFFFFF",
+        "text-ink": "#0E1411",
+        "text-ink-soft": "#3A4541",
+        "text-muted": "#6E7A75",
+        "border-line": "#E2DCD2",
+        "border-line-soft": "#EDE8DF",
+        "bg-accent": "#0D6B6E",
+        "text-accent-ink": "#FFFFFF",
+        "bg-accent-soft": "#E6EFEE",
+        "text-accent": "#0D6B6E",
+        error: "#B14040"
       },
       fontFamily: {
-        sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
-        serif: ['Georgia', '"Times New Roman"', 'serif']
+        sans: ["var(--font-sans)", "sans-serif"],
+        serif: ["var(--font-serif)", "serif"],
+        mono: ["var(--font-mono)", "monospace"]
+      },
+      fontSize: {
+        "hero-brief": "clamp(2.75rem, 8vw, 6.875rem)",
+        "display-110": "110px",
+        "display-72": "72px",
+        "display-48": "48px",
+        "display-44": "44px",
+        "kicker-h3": "28px",
+        "body-serif": "19px",
+        "mono-caption": "11px",
+        "mono-input": "13px"
       },
       lineHeight: {
         tight: "1.1",
@@ -27,13 +44,12 @@ module.exports = {
         relaxed: "1.7"
       },
       borderRadius: {
-        pill: "999px",
-        card: "20px",
-        control: "14px",
-        input: "10px"
+        sm: "2px",
+        DEFAULT: "4px",
+        full: "999px"
       },
       screens: {
-        mobile: { max: "720px" }
+        mobile: { max: "640px" }
       },
       keyframes: {
         "pulse-opacity": {
