@@ -76,7 +76,7 @@ export async function classifyContent(content: string): Promise<boolean> {
       },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL ?? DEFAULT_MODEL,
-        max_output_tokens: 10,
+        max_output_tokens: 16,
         input: [
           {
             role: "system",
