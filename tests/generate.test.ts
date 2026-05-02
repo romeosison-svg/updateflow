@@ -141,7 +141,7 @@ describe("classifyContent", () => {
       max_tokens?: number;
     };
 
-    expect(requestBody.max_output_tokens).toBe(10);
+    expect(requestBody.max_output_tokens).toBe(16);
     expect(requestBody.max_tokens).toBeUndefined();
   });
 
