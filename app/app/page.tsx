@@ -320,7 +320,8 @@ export default function ToolPage() {
           }
         };
       });
-    } catch {
+    } catch (error) {
+      console.error("prefetchDeliveryOnlyOutput failed for", key, error);
       setOptionalOutputCache((current) => {
         const nextCard = current[key];
 
@@ -508,7 +509,14 @@ export default function ToolPage() {
           showDeliveryError: true
         }
       }));
+      return;
     }
+
+    console.warn(
+      "delivery filter toggle: unexpected state — no output, no loading, no error for key",
+      key,
+      cardState
+    );
   };
 
   const handleSampleClick = (value: string) => {
@@ -795,18 +803,18 @@ export default function ToolPage() {
                     <button
                       type="button"
                       className={cardState.activeMode === "default" ? activeToggleBtn : copyBtn}
+                      aria-pressed={cardState.activeMode === "default"}
                       onClick={() => handleSetOptionalOutputMode(card.key, "default")}
-                      disabled={cardState.activeMode === "default"}
                     >
                       Default
                     </button>
                     <button
                       type="button"
                       className={cardState.activeMode === "delivery" ? activeToggleBtn : copyBtn}
+                      aria-pressed={cardState.activeMode === "delivery"}
                       onClick={() => handleSetOptionalOutputMode(card.key, "delivery")}
                       disabled={
-                        cardState.activeMode === "delivery" ||
-                        (cardState.deliveryOutputLoading && cardState.pendingMode === "delivery")
+                        cardState.deliveryOutputLoading && cardState.pendingMode === "delivery"
                       }
                     >
                       Delivery only

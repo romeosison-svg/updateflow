@@ -98,9 +98,12 @@ describe("Action List prompt behaviour", () => {
     outputType: "action-list"
   });
 
-  it("reverts the opening framing back to the simpler transcript extraction instruction", () => {
-    expect(prompt).toContain("Extract an action list from the transcript.");
-    expect(prompt).not.toContain("If in doubt, leave it out.");
+  it("uses PM-specific framing that instructs selective extraction", () => {
+    expect(prompt).toContain(
+      "You are extracting a delivery action list for an IT Project Manager."
+    );
+    expect(prompt).toContain("Your job is not to capture everything discussed.");
+    expect(prompt).toContain("If in doubt, leave it out.");
   });
 
   it("only includes real follow-up actions and not status updates", () => {
