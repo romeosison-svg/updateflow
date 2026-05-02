@@ -50,7 +50,8 @@ async function runPipeline({
   const result = await generateText({
     transcript,
     outputType,
-    audience
+    audience,
+    deliveryOnly: true
   });
 
   const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
@@ -403,7 +404,8 @@ describe("generateText post-output filter pipeline", () => {
 
     const result = await generateText({
       transcript,
-      outputType: "action-list"
+      outputType: "action-list",
+      deliveryOnly: true
     });
 
     expect(result).toContain("1. Folder structure changes were discussed");
