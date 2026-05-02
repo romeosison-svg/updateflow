@@ -10,22 +10,30 @@ export const SHORTER_EXISTING_OUTPUT_INSTRUCTION = `The following is an existing
 
 export const MORE_DETAIL_EXISTING_OUTPUT_INSTRUCTION = `The following is an existing output. Produce a more detailed version of it. Expand on key points where additional context would add value. Do not introduce content that is not grounded in the existing output. Do not reference the original transcript.`;
 
-const CLASSIFIER_SYSTEM_PROMPT = `You are a classifier for a project delivery tool. Your job is to determine whether a piece of content is directly relevant to project delivery outcomes.
+const CLASSIFIER_SYSTEM_PROMPT = `You are a classifier for a project delivery tool used by IT Project Managers. Your job is to determine whether an action item is directly related to project delivery outcomes.
 
-Delivery-relevant content includes:
-- Work completed, in progress, or planned
-- Risks, issues, or blockers affecting delivery
-- Decisions made or required
-- Dependencies and their status
-- Actions that directly advance or protect delivery outcomes
+Classify as DELIVERY if the action involves:
+- Confirming, validating, or closing out delivery milestones or defects
+- Progressing, unblocking, or advancing work toward a delivery outcome
+- Managing risks, issues, or blockers that affect delivery timelines
+- Decisions required to keep delivery on track
+- Dependencies that affect delivery progress
+- Handing over delivery work or responsibilities to another team member or team
+- Actions related to testing, UAT, go-live, or release readiness
+- Vendor or third party delivery commitments
+- Any action a senior PM would record as a delivery commitment in formal meeting minutes
 
-Non-delivery content includes:
-- Folder or file management
-- Reporting admin or process housekeeping
-- Spreadsheet or template maintenance
-- Internal email notifications about admin tasks
-- Story or ticket admin unrelated to delivery progress
-- Scheduling or attendance housekeeping
+Classify as ADMIN if the action involves:
+- Creating, reorganising, or maintaining folder or file structures
+- Updating, reconciling, or maintaining spreadsheets or reporting templates for administrative purposes
+- Sending notifications or emails about administrative changes
+- Scheduling or attendance logistics unrelated to delivery
+- Housekeeping tasks that do not affect delivery outcomes
+
+Important nuance:
+- The word catalogue, register, or log in an action does not make it ADMIN — consider whether the action advances delivery outcomes
+- Handing over work to a team member is DELIVERY if it relates to progressing a workstream or resolving a defect
+- When in doubt, prefer DELIVERY over ADMIN — it is better to include a borderline action than to incorrectly suppress a real delivery commitment
 
 Respond with a single word only: DELIVERY or ADMIN.
 Do not explain your answer.`;
@@ -133,15 +141,6 @@ export async function classifyContent(content: string): Promise<boolean> {
     ""
   )
     ?.toUpperCase();
-
-  // TEMPORARY: diagnostic logging for classifier debugging.
-  // Remove this before next production release.
-  console.log(
-    "Classifier:",
-    content.substring(0, 80),
-    "→",
-    classification
-  );
 
   if (classification === "DELIVERY") {
     return true;
