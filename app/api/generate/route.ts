@@ -12,6 +12,7 @@ const MAX_TRANSCRIPT_LENGTH = 25000;
 type GenerateRouteBody = {
   adjustmentDirection?: LengthAdjustmentDirection;
   currentOutput?: string;
+  deliveryOnly?: boolean;
   includeActionList?: boolean;
   includeExternal?: boolean;
   includeInternal?: boolean;
@@ -34,6 +35,7 @@ function getLengthInstructionForAdjustmentDirection(
 
 function getShortStatusGenerationParams(body: GenerateRouteBody) {
   return {
+    deliveryOnly: body.deliveryOnly === true,
     transcript: body.transcript?.trim() ?? "",
     currentOutput: body.currentOutput?.trim() || undefined,
     lengthInstruction: getLengthInstructionForAdjustmentDirection(body.adjustmentDirection),
@@ -69,6 +71,7 @@ export async function POST(request: Request) {
 
     const transcript = body.transcript?.trim() ?? "";
     const includeActionList = body.includeActionList === true;
+    const deliveryOnly = body.deliveryOnly === true;
     const includeExternal = body.includeExternal === true;
     const includeInternal = body.includeInternal === true;
     const outputType = body.outputType?.trim();
@@ -93,6 +96,7 @@ export async function POST(request: Request) {
 
     if (includeActionList || outputType === "action-list") {
       const actionList = await generateText({
+        deliveryOnly,
         transcript,
         outputType: "action-list"
       });
@@ -108,6 +112,7 @@ export async function POST(request: Request) {
 
     if (includeInternal) {
       const internalUpdate = await generateText({
+        deliveryOnly,
         transcript,
         outputType: "stakeholder-update",
         audience: "internal"
@@ -124,6 +129,7 @@ export async function POST(request: Request) {
 
     if (includeExternal) {
       const externalUpdate = await generateText({
+        deliveryOnly,
         transcript,
         outputType: "stakeholder-update",
         audience: "external"

@@ -254,13 +254,10 @@ Instructions:
 - Maintain useful detail after sanitisation`
 };
 
+// Default mode still uses delivery-biased prompts, so it does not mean literally all transcript content.
 const ACTION_LIST_PROMPT: PromptDefinition = {
   label: "Action List",
-  body: `You are extracting a delivery action list for an IT Project Manager.
-
-Your job is not to capture everything discussed. Your job is to identify only the actions that a senior PM would record in formal meeting minutes as new delivery commitments.
-
-If in doubt, leave it out.
+  body: `Extract an action list from the transcript.
 
 For each action include:
 - Action

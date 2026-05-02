@@ -98,12 +98,9 @@ describe("Action List prompt behaviour", () => {
     outputType: "action-list"
   });
 
-  it("frames the output as a delivery action list for formal PM commitments only", () => {
-    expect(prompt).toContain("You are extracting a delivery action list for an IT Project Manager.");
-    expect(prompt).toContain(
-      "Your job is not to capture everything discussed. Your job is to identify only the actions that a senior PM would record in formal meeting minutes as new delivery commitments."
-    );
-    expect(prompt).toContain("If in doubt, leave it out.");
+  it("reverts the opening framing back to the simpler transcript extraction instruction", () => {
+    expect(prompt).toContain("Extract an action list from the transcript.");
+    expect(prompt).not.toContain("If in doubt, leave it out.");
   });
 
   it("only includes real follow-up actions and not status updates", () => {

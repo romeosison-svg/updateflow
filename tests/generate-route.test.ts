@@ -42,6 +42,7 @@ describe("generate route length adjustment flow", () => {
 
     expect(response.status).toBe(200);
     expect(generateText).toHaveBeenCalledWith({
+      deliveryOnly: false,
       transcript: "Original transcript text",
       currentOutput: "Shortened weekly update",
       lengthInstruction: SHORTER_EXISTING_OUTPUT_INSTRUCTION,
@@ -66,6 +67,7 @@ describe("generate route length adjustment flow", () => {
 
     expect(response.status).toBe(200);
     expect(generateText).toHaveBeenCalledWith({
+      deliveryOnly: false,
       transcript: "Original transcript text",
       currentOutput: "Expanded weekly update",
       lengthInstruction: MORE_DETAIL_EXISTING_OUTPUT_INSTRUCTION,
@@ -88,6 +90,7 @@ describe("generate route length adjustment flow", () => {
 
     expect(response.status).toBe(200);
     expect(generateText).toHaveBeenCalledWith({
+      deliveryOnly: false,
       transcript: "Original transcript text",
       currentOutput: undefined,
       lengthInstruction: undefined,
@@ -114,6 +117,76 @@ describe("generate route length adjustment flow", () => {
       outputs: {
         shortStatus: "Tight weekly update"
       }
+    });
+  });
+
+  it("normalises deliveryOnly true and forwards it for action list generation", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript: "Original transcript text",
+          outputType: "action-list",
+          deliveryOnly: true
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(generateText).toHaveBeenCalledWith({
+      deliveryOnly: true,
+      transcript: "Original transcript text",
+      outputType: "action-list"
+    });
+  });
+
+  it("defaults missing deliveryOnly to false when forwarding short status generation", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript: "Original transcript text"
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(generateText).toHaveBeenCalledWith({
+      deliveryOnly: false,
+      transcript: "Original transcript text",
+      currentOutput: undefined,
+      lengthInstruction: undefined,
+      outputType: "short-status-update"
+    });
+  });
+
+  it("uses strict body.deliveryOnly === true normalisation", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          transcript: "Original transcript text",
+          includeInternal: true,
+          deliveryOnly: "true"
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(generateText).toHaveBeenCalledWith({
+      deliveryOnly: false,
+      transcript: "Original transcript text",
+      outputType: "stakeholder-update",
+      audience: "internal"
     });
   });
 });

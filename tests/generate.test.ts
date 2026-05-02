@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   classifyContent,
+  filterGeneratedOutput,
   filterActionListOutput,
   filterSectionedOutput,
   filterShortStatusOutput,
@@ -152,6 +153,98 @@ describe("classifyContent", () => {
     expect(console.error).toHaveBeenCalledWith(
       "OpenAI classification returned an unexpected response. Retaining content item.",
       ""
+    );
+  });
+});
+
+describe("filterGeneratedOutput", () => {
+  beforeEach(() => {
+    process.env.OPENAI_API_KEY = "test-openai-key";
+    vi.stubGlobal("fetch", vi.fn());
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_MODEL;
+  });
+
+  it("returns raw action list output unchanged when deliveryOnly is false", async () => {
+    const rawOutput = [
+      "1. Confirm revised vendor delivery date",
+      "   Owner: PM",
+      "   Priority: High"
+    ].join("\n");
+
+    await expect(filterGeneratedOutput(rawOutput, "action-list", false)).resolves.toBe(rawOutput);
+  });
+
+  it("returns raw stakeholder update output unchanged when deliveryOnly is undefined", async () => {
+    const rawOutput = [
+      "Progress / Achievements",
+      "",
+      "- Folder structure reviewed for the weekly reporting pack"
+    ].join("\n");
+
+    await expect(filterGeneratedOutput(rawOutput, "stakeholder-update")).resolves.toBe(rawOutput);
+  });
+
+  it("returns raw short status output unchanged when deliveryOnly is false", async () => {
+    const rawOutput =
+      "Folder structure updates are still needed for the weekly reporting pack. Focus this week is on confirming the revised vendor delivery date.";
+
+    await expect(filterGeneratedOutput(rawOutput, "short-status-update", false)).resolves.toBe(
+      rawOutput
+    );
+  });
+
+  it("filters action list output when deliveryOnly is true", async () => {
+    const rawOutput = [
+      "1. Confirm revised vendor delivery date",
+      "   Owner: PM",
+      "   Priority: High",
+      "",
+      "2. Update the spreadsheet before Friday",
+      "   Owner: PMO",
+      "   Priority: Medium"
+    ].join("\n");
+
+    queueClassifierResponses(["DELIVERY", "ADMIN"]);
+
+    await expect(filterGeneratedOutput(rawOutput, "action-list", true)).resolves.toBe(
+      [
+        "1. Confirm revised vendor delivery date",
+        "   Owner: PM",
+        "   Priority: High"
+      ].join("\n")
+    );
+  });
+
+  it("filters stakeholder update output when deliveryOnly is true", async () => {
+    const rawOutput = [
+      "Progress / Achievements",
+      "",
+      "- UAT entry criteria approved",
+      "- Folder structure reviewed for the weekly reporting pack"
+    ].join("\n");
+
+    queueClassifierResponses(["DELIVERY", "ADMIN"]);
+
+    await expect(filterGeneratedOutput(rawOutput, "stakeholder-update", true)).resolves.toBe(
+      ["Progress / Achievements", "", "- UAT entry criteria approved"].join("\n")
+    );
+  });
+
+  it("filters short status output when deliveryOnly is true", async () => {
+    const rawOutput =
+      "UAT entry criteria were approved and the cutover plan remains on track. Update the spreadsheet before the PMO review.";
+
+    queueClassifierResponses(["DELIVERY", "ADMIN"]);
+
+    await expect(filterGeneratedOutput(rawOutput, "short-status-update", true)).resolves.toBe(
+      "UAT entry criteria were approved and the cutover plan remains on track."
     );
   });
 });
@@ -658,5 +751,48 @@ describe("generateText length adjustment source", () => {
       "Original transcript content that should remain unused for this adjustment."
     );
     expect(requestBody.input).toContain(MORE_DETAIL_EXISTING_OUTPUT_INSTRUCTION);
+  });
+
+  it("returns raw output unchanged when deliveryOnly is false", async () => {
+    const fetchMock = global.fetch as unknown as FetchMock;
+    const rawOutput =
+      "UAT entry criteria were approved and the cutover plan remains on track. Update the spreadsheet before the PMO review.";
+
+    fetchMock.mockResolvedValueOnce(
+      createOpenAiResponse({
+        output_text: rawOutput
+      })
+    );
+
+    await expect(
+      generateText({
+        transcript: "Original transcript content.",
+        deliveryOnly: false,
+        outputType: "short-status-update"
+      })
+    ).resolves.toBe(rawOutput);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns filtered output when deliveryOnly is true", async () => {
+    const fetchMock = global.fetch as unknown as FetchMock;
+
+    fetchMock.mockResolvedValueOnce(
+      createOpenAiResponse({
+        output_text:
+          "UAT entry criteria were approved and the cutover plan remains on track. Update the spreadsheet before the PMO review."
+      })
+    );
+    fetchMock.mockResolvedValueOnce(createClassifierResponse("DELIVERY"));
+    fetchMock.mockResolvedValueOnce(createClassifierResponse("ADMIN"));
+
+    await expect(
+      generateText({
+        transcript: "Original transcript content.",
+        deliveryOnly: true,
+        outputType: "short-status-update"
+      })
+    ).resolves.toBe("UAT entry criteria were approved and the cutover plan remains on track.");
   });
 });

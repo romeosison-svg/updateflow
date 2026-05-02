@@ -33,6 +33,7 @@ Do not explain your answer.`;
 export type LengthAdjustmentDirection = "shorter" | "more_detail";
 
 type GenerateTextParams = {
+  deliveryOnly?: boolean;
   transcript: string;
   currentOutput?: string;
   lengthInstruction?: string;
@@ -132,8 +133,6 @@ export async function classifyContent(content: string): Promise<boolean> {
     ""
   )
     ?.toUpperCase();
-
-  console.log("Classifier result for content item:", content.substring(0, 50), "→", classification);
 
   if (classification === "DELIVERY") {
     return true;
@@ -277,7 +276,19 @@ export async function filterShortStatusOutput(rawOutput: string): Promise<string
   return filteredSentences.join(" ").trim();
 }
 
-async function filterGeneratedOutput(output: string, outputType: OutputType): Promise<string> {
+// Default mode returns unfiltered model output, but the prompts remain delivery-biased.
+// "Default" therefore does not mean literally all transcript content.
+// "Delivery only" adds classifier filtering on top of the already delivery-biased prompt output.
+// The backend supports deliveryOnly for short-status-update, but no UI control exposes it.
+export async function filterGeneratedOutput(
+  output: string,
+  outputType: OutputType,
+  deliveryOnly?: boolean
+): Promise<string> {
+  if (deliveryOnly !== true) {
+    return output;
+  }
+
   switch (outputType) {
     case "action-list":
       return filterActionListOutput(output);
@@ -289,6 +300,7 @@ async function filterGeneratedOutput(output: string, outputType: OutputType): Pr
 }
 
 export async function generateText({
+  deliveryOnly,
   transcript,
   currentOutput,
   lengthInstruction,
@@ -341,7 +353,7 @@ export async function generateText({
   const outputText = data.output_text?.trim();
 
   if (outputText) {
-    return filterGeneratedOutput(outputText, outputType);
+    return filterGeneratedOutput(outputText, outputType, deliveryOnly);
   }
 
   const fallbackOutput = data.output
@@ -352,7 +364,7 @@ export async function generateText({
     .join("\n\n");
 
   if (fallbackOutput) {
-    return filterGeneratedOutput(fallbackOutput, outputType);
+    return filterGeneratedOutput(fallbackOutput, outputType, deliveryOnly);
   }
 
   if (data.error?.message) {

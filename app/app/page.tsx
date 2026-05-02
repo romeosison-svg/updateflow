@@ -1,13 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import React, { FormEvent, useState } from "react";
 import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
 import {
   getAddToPackAnalyticsType,
   getCopiedOutputAnalyticsType
 } from "../../lib/analytics";
-import type { GeneratedOutputs, OutputCardKey } from "../../lib/output";
+import type { OutputCardKey } from "../../lib/output";
 import {
   buildWeeklyUpdateRequestBody,
   getLengthAdjustedEventPayload,
@@ -21,19 +21,19 @@ const sampleTranscripts = [
     id: "migration-week",
     label: "migration week",
     transcript:
-      "Monday: Confirmed cutover window with infrastructure team for Saturday night. Vendor yet to provide final environment sign-off.\n\nTuesday: Sign-off still outstanding. Escalated to vendor account manager. Parallel workstream leads asked to review dependencies ahead of cutover.\n\nWednesday: Vendor confirmed environment ready. UAT entry criteria reviewed with QA lead — two outstanding defects flagged as potential blockers. Decision to defer lower-priority defect and proceed with UAT.\n\nThursday: UAT started. First round of test cases passed. One defect raised against the reporting module — under investigation. Client stakeholder briefed on status.\n\nFriday: UAT progressing. Reporting defect confirmed as low severity and deferred to post-go-live. Cutover plan confirmed for Saturday. Communications drafted and ready to send."
+      "Monday: Confirmed cutover window with infrastructure team for Saturday night. Vendor yet to provide final environment sign-off.\n\nTuesday: Sign-off still outstanding. Escalated to vendor account manager. Parallel workstream leads asked to review dependencies ahead of cutover.\n\nWednesday: Vendor confirmed environment ready. UAT entry criteria reviewed with QA lead â€” two outstanding defects flagged as potential blockers. Decision to defer lower-priority defect and proceed with UAT.\n\nThursday: UAT started. First round of test cases passed. One defect raised against the reporting module â€” under investigation. Client stakeholder briefed on status.\n\nFriday: UAT progressing. Reporting defect confirmed as low severity and deferred to post-go-live. Cutover plan confirmed for Saturday. Communications drafted and ready to send."
   },
   {
     id: "programme-update",
     label: "programme update",
     transcript:
-      "Monday: Kick-off for new workstream completed. Three work packages assigned to stream leads. Resource gap identified in data migration track — flagged to PMO.\n\nTuesday: Data migration resource confirmed for two days per week. Dependencies mapped across all three workstreams. Risk log updated.\n\nWednesday: Steering group prep completed. Deck reviewed with sponsor. Two decisions required from steering: budget approval for additional QA resource and sign-off on revised go-live date.\n\nThursday: Steering group held. Budget approved. Go-live date moved to end of next month — agreed by all parties. Stream leads notified and plans being updated.\n\nFriday: Updated programme plan circulated. One stream lead flagged a risk around third-party API readiness. Added to RAID. Next week focus is confirming integration test schedule."
+      "Monday: Kick-off for new workstream completed. Three work packages assigned to stream leads. Resource gap identified in data migration track â€” flagged to PMO.\n\nTuesday: Data migration resource confirmed for two days per week. Dependencies mapped across all three workstreams. Risk log updated.\n\nWednesday: Steering group prep completed. Deck reviewed with sponsor. Two decisions required from steering: budget approval for additional QA resource and sign-off on revised go-live date.\n\nThursday: Steering group held. Budget approved. Go-live date moved to end of next month â€” agreed by all parties. Stream leads notified and plans being updated.\n\nFriday: Updated programme plan circulated. One stream lead flagged a risk around third-party API readiness. Added to RAID. Next week focus is confirming integration test schedule."
   },
   {
     id: "delivery-risk",
     label: "delivery risk",
     transcript:
-      "- API integration delayed — vendor missed agreed delivery date\n- QA resource stretched across two workstreams this sprint\n- UAT entry criteria not yet signed off by client\n- Risk to UAT start date if API not delivered by Wednesday\n- PM to confirm revised timeline with vendor tomorrow"
+      "- API integration delayed â€” vendor missed agreed delivery date\n- QA resource stretched across two workstreams this sprint\n- UAT entry criteria not yet signed off by client\n- Risk to UAT start date if API not delivered by Wednesday\n- PM to confirm revised timeline with vendor tomorrow"
   },
   {
     id: "action-heavy-week",
@@ -57,10 +57,55 @@ const optionalOutputCards: Array<{
   { key: "externalUpdate", title: "External Update", errorLabel: "the external update" }
 ];
 
+type OptionalOutputKey = (typeof optionalOutputCards)[number]["key"];
+type OptionalFilterMode = "default" | "delivery";
+
+type OptionalOutputCacheState = {
+  activeMode: OptionalFilterMode;
+  defaultOutput: string;
+  deliveryOutput: string | null;
+  deliveryOutputError: boolean;
+  deliveryOutputLoading: boolean;
+  pendingMode: OptionalFilterMode | null;
+  showDeliveryError: boolean;
+};
+
+type OptionalOutputCache = Record<OptionalOutputKey, OptionalOutputCacheState>;
+
+function createEmptyOptionalOutputCacheState(): OptionalOutputCacheState {
+  return {
+    activeMode: "default",
+    defaultOutput: "",
+    deliveryOutput: null,
+    deliveryOutputError: false,
+    deliveryOutputLoading: false,
+    pendingMode: null,
+    showDeliveryError: false
+  };
+}
+
+function createInitialOptionalOutputCache(): OptionalOutputCache {
+  return {
+    actionList: createEmptyOptionalOutputCacheState(),
+    internalUpdate: createEmptyOptionalOutputCacheState(),
+    externalUpdate: createEmptyOptionalOutputCacheState()
+  };
+}
+
+function getDeliveryFilterOutputType(key: OptionalOutputKey) {
+  switch (key) {
+    case "actionList":
+      return "action_list";
+    case "internalUpdate":
+      return "internal_update";
+    case "externalUpdate":
+      return "external_update";
+  }
+}
+
 export default function ToolPage() {
   const posthog = usePostHog();
   const [transcript, setTranscript] = useState("");
-  const [outputs, setOutputs] = useState<GeneratedOutputs | null>(null);
   const [defaultWeeklyUpdate, setDefaultWeeklyUpdate] = useState("");
   const [displayedWeeklyUpdate, setDisplayedWeeklyUpdate] = useState("");
   const [error, setError] = useState("");
@@ -68,9 +113,14 @@ export default function ToolPage() {
   const [isExternalLoading, setIsExternalLoading] = useState(false);
   const [isInternalLoading, setIsInternalLoading] = useState(false);
   const [isWeeklyUpdateLoading, setIsWeeklyUpdateLoading] = useState(false);
-  const [copyLabels, setCopyLabels] = useState<
-    Partial<Record<OutputCardKey, string>>
-  >({});
+  const [copyLabels, setCopyLabels] = useState<Partial<Record<OutputCardKey, string>>>({});
+  // Spec note: the prompt layer remains delivery-biased in Default mode, so this cache
+  // represents "raw model output under current prompts" vs "classifier-filtered output".
+  // We also track a pending delivery switch so a user can request Delivery only before the
+  // prefetched variant is ready without blanking the current output.
+  const [optionalOutputCache, setOptionalOutputCache] = useState<OptionalOutputCache>(
+    createInitialOptionalOutputCache()
+  );
 
   const primaryBtn =
     "inline-flex items-center justify-center py-3 px-6 bg-gradient-to-b from-[#0f8080] to-[#0a5f63] text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors transition-shadow duration-200 shadow-[0_2px_6px_rgba(13,115,119,0.35)] enabled:hover:bg-accent-hover enabled:hover:shadow-[0_4px_12px_rgba(13,115,119,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
@@ -81,6 +131,8 @@ export default function ToolPage() {
   const copyBtn =
     "inline-flex items-center justify-center py-[0.35rem] px-3 text-[0.8rem] font-medium text-muted bg-transparent border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:text-accent hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
+  const activeToggleBtn = `${copyBtn} border-accent text-accent bg-accent-light`;
+
   const cardClasses =
     "bg-card border border-border rounded-control p-6 mobile:p-4 mobile:rounded-card shadow-[0_2px_8px_rgba(0,0,0,0.06)]";
 
@@ -89,6 +141,16 @@ export default function ToolPage() {
 
   const outputPanelBase =
     "min-h-[260px] p-4 border border-border rounded-control bg-card";
+
+  const resetSupplementaryOutputs = () => {
+    setOptionalOutputCache(createInitialOptionalOutputCache());
+    setCopyLabels((current) => ({
+      ...current,
+      actionList: "Copy",
+      internalUpdate: "Copy",
+      externalUpdate: "Copy"
+    }));
+  };
 
   const generateWeeklyUpdate = async (
     options?: {
@@ -101,8 +163,7 @@ export default function ToolPage() {
   ) => {
     if (!transcript.trim()) {
       if (options?.resetSupplementaryOutputs) {
-        setOutputs(null);
-        setCopyLabels({});
+        resetSupplementaryOutputs();
       }
       if (options?.isResetToDefault) {
         setDefaultWeeklyUpdate("");
@@ -134,7 +195,10 @@ export default function ToolPage() {
         )
       });
 
-      const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
+      const data = (await response.json()) as {
+        outputs?: Partial<Record<OutputCardKey, string>>;
+        error?: string;
+      };
       const nextWeeklyUpdate = data.outputs?.shortStatus ?? "";
 
       if (!response.ok || !nextWeeklyUpdate) {
@@ -142,7 +206,7 @@ export default function ToolPage() {
       }
 
       if (options?.resetSupplementaryOutputs) {
-        setOutputs({});
+        resetSupplementaryOutputs();
       }
 
       if (options?.adjustmentDirection) {
@@ -162,7 +226,7 @@ export default function ToolPage() {
       }
     } catch (generationError) {
       if (options?.resetSupplementaryOutputs) {
-        setOutputs(null);
+        resetSupplementaryOutputs();
       }
       if (options?.isResetToDefault) {
         setDisplayedWeeklyUpdate(defaultWeeklyUpdate);
@@ -209,18 +273,15 @@ export default function ToolPage() {
     });
   };
 
-  const handleGenerateActionList = async () => {
-    if (!transcript.trim()) {
-      setError("Paste some meeting notes or a transcript before generating the action list.");
-      return;
+  const prefetchDeliveryOnlyOutput = async (
+    key: OptionalOutputKey,
+    requestBody: {
+      transcript: string;
+      includeExternal?: boolean;
+      includeInternal?: boolean;
+      outputType?: "action-list";
     }
-
-    setError("");
-    setIsActionListLoading(true);
-    posthog?.capture("add_to_pack_clicked", {
-      type: getAddToPackAnalyticsType("actionList")
-    });
-
+  ) => {
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -228,41 +289,64 @@ export default function ToolPage() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          transcript,
-          outputType: "action-list"
+          ...requestBody,
+          deliveryOnly: true
         })
       });
 
-      const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
-      const value = data.outputs?.actionList;
+      const data = (await response.json()) as {
+        outputs?: Partial<Record<OutputCardKey, string>>;
+        error?: string;
+      };
+      const value = data.outputs?.[key];
 
       if (!response.ok || !value) {
-        throw new Error(data.error ?? "Something went wrong while generating the action list.");
+        throw new Error(data.error ?? "Delivery-only generation failed.");
       }
 
-      setOutputs((current) => ({
-        ...(current ?? {}),
-        actionList: value
-      }));
-      setCopyLabels((current) => ({
-        ...current,
-        actionList: "Copy"
-      }));
+      setOptionalOutputCache((current) => {
+        const nextCard = current[key];
 
-    } catch (actionListError) {
-      setError(
-        actionListError instanceof Error
-          ? actionListError.message
-          : "Something went wrong while generating the action list."
-      );
-    } finally {
-      setIsActionListLoading(false);
+        return {
+          ...current,
+          [key]: {
+            ...nextCard,
+            activeMode: nextCard.pendingMode === "delivery" ? "delivery" : nextCard.activeMode,
+            deliveryOutput: value,
+            deliveryOutputError: false,
+            deliveryOutputLoading: false,
+            pendingMode: null,
+            showDeliveryError: false
+          }
+        };
+      });
+    } catch {
+      setOptionalOutputCache((current) => {
+        const nextCard = current[key];
+
+        return {
+          ...current,
+          [key]: {
+            ...nextCard,
+            deliveryOutputError: true,
+            deliveryOutputLoading: false,
+            pendingMode: null,
+            showDeliveryError: nextCard.pendingMode === "delivery"
+          }
+        };
+      });
     }
   };
 
-  const handleGenerateOptionalOutput = async (
-    key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate">,
-    errorLabel: string
+  const handleGenerateFilterableOutput = async (
+    key: OptionalOutputKey,
+    errorLabel: string,
+    requestBody: {
+      transcript: string;
+      includeExternal?: boolean;
+      includeInternal?: boolean;
+      outputType?: "action-list";
+    }
   ) => {
     if (!transcript.trim()) {
       setError(`Paste some meeting notes or a transcript before generating ${errorLabel}.`);
@@ -275,6 +359,9 @@ export default function ToolPage() {
     });
 
     switch (key) {
+      case "actionList":
+        setIsActionListLoading(true);
+        break;
       case "internalUpdate":
         setIsInternalLoading(true);
         break;
@@ -284,44 +371,46 @@ export default function ToolPage() {
     }
 
     try {
-      const requestBody: {
-        transcript: string;
-        includeExternal?: boolean;
-        includeInternal?: boolean;
-      } = {
-        transcript
-      };
-
-      if (key === "internalUpdate") {
-        requestBody.includeInternal = true;
-      } else {
-        requestBody.includeExternal = true;
-      }
+      setOptionalOutputCache((current) => ({
+        ...current,
+        [key]: createEmptyOptionalOutputCacheState()
+      }));
 
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          ...requestBody,
+          deliveryOnly: false
+        })
       });
 
-      const data = (await response.json()) as { outputs?: GeneratedOutputs; error?: string };
+      const data = (await response.json()) as {
+        outputs?: Partial<Record<OutputCardKey, string>>;
+        error?: string;
+      };
       const value = data.outputs?.[key];
 
       if (!response.ok || !value) {
         throw new Error(data.error ?? `Something went wrong while generating ${errorLabel}.`);
       }
 
-      setOutputs((current) => ({
-        ...(current ?? {}),
-        [key]: value
+      setOptionalOutputCache((current) => ({
+        ...current,
+        [key]: {
+          ...createEmptyOptionalOutputCacheState(),
+          defaultOutput: value,
+          deliveryOutputLoading: true
+        }
       }));
       setCopyLabels((current) => ({
         ...current,
         [key]: "Copy"
       }));
 
+      void prefetchDeliveryOnlyOutput(key, requestBody);
     } catch (optionalError) {
       setError(
         optionalError instanceof Error
@@ -330,6 +419,9 @@ export default function ToolPage() {
       );
     } finally {
       switch (key) {
+        case "actionList":
+          setIsActionListLoading(false);
+          break;
         case "internalUpdate":
           setIsInternalLoading(false);
           break;
@@ -337,6 +429,85 @@ export default function ToolPage() {
           setIsExternalLoading(false);
           break;
       }
+    }
+  };
+
+  const handleGenerateActionList = async () => {
+    await handleGenerateFilterableOutput("actionList", "the action list", {
+      transcript,
+      outputType: "action-list"
+    });
+  };
+
+  const handleGenerateOptionalOutput = async (
+    key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate">,
+    errorLabel: string
+  ) => {
+    await handleGenerateFilterableOutput(key, errorLabel, {
+      transcript,
+      ...(key === "internalUpdate" ? { includeInternal: true } : { includeExternal: true })
+    });
+  };
+
+  const handleSetOptionalOutputMode = (key: OptionalOutputKey, mode: OptionalFilterMode) => {
+    const cardState = optionalOutputCache[key];
+
+    if (cardState.activeMode === mode) {
+      return;
+    }
+
+    if (mode === "default") {
+      posthog?.capture("delivery_filter_removed", {
+        output_type: getDeliveryFilterOutputType(key)
+      });
+      setOptionalOutputCache((current) => ({
+        ...current,
+        [key]: {
+          ...current[key],
+          activeMode: "default",
+          pendingMode: null,
+          showDeliveryError: false
+        }
+      }));
+      return;
+    }
+
+    posthog?.capture("delivery_filter_applied", {
+      output_type: getDeliveryFilterOutputType(key)
+    });
+
+    if (cardState.deliveryOutput) {
+      setOptionalOutputCache((current) => ({
+        ...current,
+        [key]: {
+          ...current[key],
+          activeMode: "delivery",
+          showDeliveryError: false
+        }
+      }));
+      return;
+    }
+
+    if (cardState.deliveryOutputLoading) {
+      setOptionalOutputCache((current) => ({
+        ...current,
+        [key]: {
+          ...current[key],
+          pendingMode: "delivery",
+          showDeliveryError: false
+        }
+      }));
+      return;
+    }
+
+    if (cardState.deliveryOutputError) {
+      setOptionalOutputCache((current) => ({
+        ...current,
+        [key]: {
+          ...current[key],
+          showDeliveryError: true
+        }
+      }));
     }
   };
 
@@ -464,8 +635,8 @@ export default function ToolPage() {
                     onClick={() => handleCopy(card.key, value)}
                     disabled={!value}
                   >
-                  {copyState}
-                  <span aria-live="polite" className="sr-only">
+                    {copyState}
+                    <span aria-live="polite" className="sr-only">
                       {copyState === "Copied" ? "Copied to clipboard" : ""}
                     </span>
                   </button>
@@ -559,7 +730,11 @@ export default function ToolPage() {
           </section>
 
           {optionalOutputCards.map((card) => {
-            const value = outputs?.[card.key] ?? "";
+            const cardState = optionalOutputCache[card.key];
+            const value =
+              cardState.activeMode === "delivery" && cardState.deliveryOutput
+                ? cardState.deliveryOutput
+                : cardState.defaultOutput;
             const isCardLoading =
               card.key === "actionList"
                 ? isActionListLoading
@@ -609,11 +784,45 @@ export default function ToolPage() {
                       {card.key === "actionList"
                         ? "Actions with owners and priorities will appear here."
                         : card.key === "internalUpdate"
-                        ? "Your internal team update will appear here."
-                        : "Your stakeholder-facing update will appear here."}
+                          ? "Your internal team update will appear here."
+                          : "Your stakeholder-facing update will appear here."}
                     </p>
                   )}
                 </div>
+
+                {value && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className={cardState.activeMode === "default" ? activeToggleBtn : copyBtn}
+                      onClick={() => handleSetOptionalOutputMode(card.key, "default")}
+                      disabled={cardState.activeMode === "default"}
+                    >
+                      Default
+                    </button>
+                    <button
+                      type="button"
+                      className={cardState.activeMode === "delivery" ? activeToggleBtn : copyBtn}
+                      onClick={() => handleSetOptionalOutputMode(card.key, "delivery")}
+                      disabled={
+                        cardState.activeMode === "delivery" ||
+                        (cardState.deliveryOutputLoading && cardState.pendingMode === "delivery")
+                      }
+                    >
+                      Delivery only
+                    </button>
+                    {cardState.deliveryOutputLoading && cardState.pendingMode === "delivery" && (
+                      <span className="text-muted text-[0.8rem] font-sans">
+                        Preparing Delivery only...
+                      </span>
+                    )}
+                    {cardState.showDeliveryError && (
+                      <span className="text-error text-[0.8rem] font-sans">
+                        Delivery only is unavailable right now.
+                      </span>
+                    )}
+                  </div>
+                )}
               </section>
             );
           })}
