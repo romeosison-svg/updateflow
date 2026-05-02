@@ -134,6 +134,15 @@ export async function classifyContent(content: string): Promise<boolean> {
   )
     ?.toUpperCase();
 
+  // TEMPORARY: diagnostic logging for classifier debugging.
+  // Remove this before next production release.
+  console.log(
+    "Classifier:",
+    content.substring(0, 80),
+    "→",
+    classification
+  );
+
   if (classification === "DELIVERY") {
     return true;
   }
