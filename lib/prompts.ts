@@ -254,6 +254,7 @@ Instructions:
 - Maintain useful detail after sanitisation`
 };
 
+// Default mode still uses delivery-biased prompts, so it does not mean literally all transcript content.
 const ACTION_LIST_PROMPT: PromptDefinition = {
   label: "Action List",
   body: `You are extracting a delivery action list for an IT Project Manager.

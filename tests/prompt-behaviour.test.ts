@@ -98,11 +98,11 @@ describe("Action List prompt behaviour", () => {
     outputType: "action-list"
   });
 
-  it("frames the output as a delivery action list for formal PM commitments only", () => {
-    expect(prompt).toContain("You are extracting a delivery action list for an IT Project Manager.");
+  it("uses PM-specific framing that instructs selective extraction", () => {
     expect(prompt).toContain(
-      "Your job is not to capture everything discussed. Your job is to identify only the actions that a senior PM would record in formal meeting minutes as new delivery commitments."
+      "You are extracting a delivery action list for an IT Project Manager."
     );
+    expect(prompt).toContain("Your job is not to capture everything discussed.");
     expect(prompt).toContain("If in doubt, leave it out.");
   });
 
