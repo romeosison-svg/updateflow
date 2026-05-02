@@ -48,13 +48,29 @@ const outputCards: Array<{ key: Extract<OutputCardKey, "shortStatus">; title: st
 ];
 
 const optionalOutputCards: Array<{
+  buttonLabel: string;
+  cardTitle: string;
   errorLabel: string;
   key: Extract<OutputCardKey, "actionList" | "externalUpdate" | "internalUpdate">;
-  title: string;
 }> = [
-  { key: "actionList", title: "Action List", errorLabel: "the action list" },
-  { key: "internalUpdate", title: "Internal Update", errorLabel: "the internal update" },
-  { key: "externalUpdate", title: "External Update", errorLabel: "the external update" }
+  {
+    key: "actionList",
+    buttonLabel: "Action List",
+    cardTitle: "Actions",
+    errorLabel: "the action list"
+  },
+  {
+    key: "internalUpdate",
+    buttonLabel: "Internal Update",
+    cardTitle: "Internal Update",
+    errorLabel: "the internal update"
+  },
+  {
+    key: "externalUpdate",
+    buttonLabel: "External Update",
+    cardTitle: "External Update",
+    errorLabel: "the external update"
+  }
 ];
 
 type OptionalOutputKey = (typeof optionalOutputCards)[number]["key"];
@@ -730,7 +746,7 @@ export default function ToolPage() {
                     }
                     disabled={isWeeklyUpdateLoading || isLoading}
                   >
-                    {isLoading ? loadingLabel : card.title}
+                    {isLoading ? loadingLabel : card.buttonLabel}
                   </button>
                 );
               })}
@@ -759,7 +775,7 @@ export default function ToolPage() {
               <section key={card.key} className={`${cardClasses} grid gap-4`}>
                 <div className={outputHeaderClasses}>
                   <div>
-                    <h2 className="m-0 text-2xl font-semibold">{card.title}</h2>
+                    <h2 className="m-0 text-2xl font-semibold">{card.cardTitle}</h2>
                   </div>
                   <button
                     type="button"
