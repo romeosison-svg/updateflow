@@ -24,6 +24,17 @@ describe("tool page split editor redesign wiring", () => {
     expect(pageSource).toContain('onClick={() => setActiveTab("external")}');
   });
 
+  it("applies accent border classes to the active tab and transparent borders to inactive tabs", () => {
+    expect(pageSource).toContain('activeTab === "weekly"');
+    expect(pageSource).toContain('activeTab === "actions"');
+    expect(pageSource).toContain('activeTab === "internal"');
+    expect(pageSource).toContain('activeTab === "external"');
+    expect(pageSource).toContain('? "border-b-bg-accent text-text-ink"');
+    expect(pageSource).toContain(': "border-b-transparent text-text-muted"');
+    expect(pageSource).toContain('onClick={() => setActiveTab("weekly")}');
+    expect(pageSource).toContain('onClick={() => setActiveTab("actions")}');
+  });
+
   it("keeps weekly update handlers and events reachable from the redesigned toolbar", () => {
     expect(pageSource).toContain("handleSubmit");
     expect(pageSource).toContain('handleAdjustWeeklyUpdateLength(mode)');
@@ -36,6 +47,12 @@ describe("tool page split editor redesign wiring", () => {
   it("keeps delivery filter toggles and PostHog wiring for optional outputs", () => {
     expect(pageSource).toContain('handleSetOptionalOutputMode("actionList", "default")');
     expect(pageSource).toContain('handleSetOptionalOutputMode("actionList", "delivery")');
+    expect(pageSource).toContain('aria-pressed={optionalOutputCache.actionList.activeMode === "default"}');
+    expect(pageSource).toContain('aria-pressed={optionalOutputCache.actionList.activeMode === "delivery"}');
+    expect(pageSource).toContain('aria-pressed={optionalOutputCache.internalUpdate.activeMode === "default"}');
+    expect(pageSource).toContain('aria-pressed={optionalOutputCache.internalUpdate.activeMode === "delivery"}');
+    expect(pageSource).toContain('aria-pressed={optionalOutputCache.externalUpdate.activeMode === "default"}');
+    expect(pageSource).toContain('aria-pressed={optionalOutputCache.externalUpdate.activeMode === "delivery"}');
     expect(pageSource).toContain('"delivery_filter_applied"');
     expect(pageSource).toContain('"delivery_filter_removed"');
     expect(pageSource).toContain('"action_list"');
@@ -68,5 +85,9 @@ describe("tool page split editor redesign wiring", () => {
     expect(pageSource).toContain("handleGenerateActionList()");
     expect(pageSource).toContain('handleGenerateOptionalOutput("internalUpdate", "the internal update")');
     expect(pageSource).toContain('handleGenerateOptionalOutput("externalUpdate", "the external update")');
+  });
+
+  it("removes the dead History button from the app header", () => {
+    expect(pageSource).not.toContain(">History<");
   });
 });

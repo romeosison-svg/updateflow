@@ -702,12 +702,6 @@ export default function ToolPage() {
               Names anonymised
             </span>
             <span className="mx-3 h-4 w-px bg-line mobile:hidden" />
-            <button
-              className="rounded border border-border-line bg-transparent px-3 py-1 font-sans text-[13px] text-text-ink-soft"
-              type="button"
-            >
-              History
-            </button>
             <span className="ml-3 flex h-7 w-7 items-center justify-center rounded-full bg-ink font-mono text-mono-caption text-bg-paper">
               JR
             </span>
@@ -986,6 +980,7 @@ export default function ToolPage() {
                             ? "border border-text-accent bg-bg-accent-soft text-text-accent"
                             : "border border-border-line bg-bg-surface text-text-ink-soft"
                         }`}
+                        aria-pressed={optionalOutputCache.actionList.activeMode === "default"}
                         onClick={() => handleSetOptionalOutputMode("actionList", "default")}
                       >
                         Default
@@ -997,6 +992,7 @@ export default function ToolPage() {
                             ? "border border-text-accent bg-bg-accent-soft text-text-accent"
                             : "border border-border-line bg-bg-surface text-text-ink-soft"
                         }`}
+                        aria-pressed={optionalOutputCache.actionList.activeMode === "delivery"}
                         onClick={() => handleSetOptionalOutputMode("actionList", "delivery")}
                         disabled={
                           optionalOutputCache.actionList.deliveryOutputLoading &&
@@ -1063,6 +1059,7 @@ export default function ToolPage() {
                             ? "border border-text-accent bg-bg-accent-soft text-text-accent"
                             : "border border-border-line bg-bg-surface text-text-ink-soft"
                         }`}
+                        aria-pressed={optionalOutputCache.internalUpdate.activeMode === "default"}
                         onClick={() => handleSetOptionalOutputMode("internalUpdate", "default")}
                       >
                         Default
@@ -1074,6 +1071,7 @@ export default function ToolPage() {
                             ? "border border-text-accent bg-bg-accent-soft text-text-accent"
                             : "border border-border-line bg-bg-surface text-text-ink-soft"
                         }`}
+                        aria-pressed={optionalOutputCache.internalUpdate.activeMode === "delivery"}
                         onClick={() => handleSetOptionalOutputMode("internalUpdate", "delivery")}
                         disabled={
                           optionalOutputCache.internalUpdate.deliveryOutputLoading &&
@@ -1140,6 +1138,7 @@ export default function ToolPage() {
                             ? "border border-text-accent bg-bg-accent-soft text-text-accent"
                             : "border border-border-line bg-bg-surface text-text-ink-soft"
                         }`}
+                        aria-pressed={optionalOutputCache.externalUpdate.activeMode === "default"}
                         onClick={() => handleSetOptionalOutputMode("externalUpdate", "default")}
                       >
                         Default
@@ -1151,6 +1150,7 @@ export default function ToolPage() {
                             ? "border border-text-accent bg-bg-accent-soft text-text-accent"
                             : "border border-border-line bg-bg-surface text-text-ink-soft"
                         }`}
+                        aria-pressed={optionalOutputCache.externalUpdate.activeMode === "delivery"}
                         onClick={() => handleSetOptionalOutputMode("externalUpdate", "delivery")}
                         disabled={
                           optionalOutputCache.externalUpdate.deliveryOutputLoading &&
