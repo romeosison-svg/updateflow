@@ -44,35 +44,14 @@ const sampleTranscripts = [
   }
 ] as const;
 
-const optionalOutputCards: Array<{
-  buttonLabel: string;
-  cardTitle: string;
-  errorLabel: string;
-  key: Extract<OutputCardKey, "actionList" | "externalUpdate" | "internalUpdate">;
-}> = [
-  {
-    key: "actionList",
-    buttonLabel: "Action List",
-    cardTitle: "Actions",
-    errorLabel: "the action list"
-  },
-  {
-    key: "internalUpdate",
-    buttonLabel: "Internal Update",
-    cardTitle: "Internal Update",
-    errorLabel: "the internal update"
-  },
-  {
-    key: "externalUpdate",
-    buttonLabel: "External Update",
-    cardTitle: "External Update",
-    errorLabel: "the external update"
-  }
-];
-
-type OptionalOutputKey = (typeof optionalOutputCards)[number]["key"];
 type OptionalFilterMode = "default" | "delivery";
-type ActiveTab = "weekly" | "actions" | "internal" | "external";
+type ActiveTab = "weekly" | "actions" | "stakeholder";
+type StakeholderAudience = "internal" | "external";
+type StakeholderOutputKey = Extract<OutputCardKey, "externalUpdate" | "internalUpdate">;
+type OptionalOutputKey = Extract<
+  OutputCardKey,
+  "actionList" | "externalUpdate" | "internalUpdate"
+>;
 type WeeklyLengthMode = "default" | "shorter" | "more_detail";
 
 type OptionalOutputCacheState = {
@@ -86,6 +65,12 @@ type OptionalOutputCacheState = {
 };
 
 type OptionalOutputCache = Record<OptionalOutputKey, OptionalOutputCacheState>;
+
+const tabLabels: Record<ActiveTab, string> = {
+  weekly: "Weekly update",
+  actions: "Action list",
+  stakeholder: "Stakeholder"
+};
 
 type ParsedActionRow = {
   action: string;
@@ -182,8 +167,21 @@ function getPriorityPillClasses(priority: string) {
   return "border border-border-line bg-transparent text-text-muted";
 }
 
+function getOptionalOutputValue(cardState: OptionalOutputCacheState) {
+  return cardState.activeMode === "delivery" && cardState.deliveryOutput
+    ? cardState.deliveryOutput
+    : cardState.defaultOutput;
+}
+
+function getStakeholderOutputKey(audience: StakeholderAudience): StakeholderOutputKey {
+  return audience === "internal" ? "internalUpdate" : "externalUpdate";
+}
+
 export default function ToolPage() {
   const posthog = usePostHog();
+  const [activeTab, setActiveTab] = useState<ActiveTab>("weekly");
+  const [stakeholderAudience, setStakeholderAudience] =
+    useState<StakeholderAudience>("internal");
   const [transcript, setTranscript] = useState("");
   const [defaultWeeklyUpdate, setDefaultWeeklyUpdate] = useState("");
   const [displayedWeeklyUpdate, setDisplayedWeeklyUpdate] = useState("");
@@ -200,37 +198,35 @@ export default function ToolPage() {
   const [optionalOutputCache, setOptionalOutputCache] = useState<OptionalOutputCache>(
     createInitialOptionalOutputCache()
   );
-  const [activeTab, setActiveTab] = useState<ActiveTab>("weekly");
   // Spec gap: the existing weekly-update flow stores current text but not a canonical
   // "shorter vs more detail" mode, so this UI-only state tracks the last selected view.
   const [weeklyLengthMode, setWeeklyLengthMode] = useState<WeeklyLengthMode>("default");
 
-  const actionListOutput = optionalOutputCache.actionList.activeMode === "delivery" &&
-    optionalOutputCache.actionList.deliveryOutput
-    ? optionalOutputCache.actionList.deliveryOutput
-    : optionalOutputCache.actionList.defaultOutput;
-  const internalOutput = optionalOutputCache.internalUpdate.activeMode === "delivery" &&
-    optionalOutputCache.internalUpdate.deliveryOutput
-    ? optionalOutputCache.internalUpdate.deliveryOutput
-    : optionalOutputCache.internalUpdate.defaultOutput;
-  const externalOutput = optionalOutputCache.externalUpdate.activeMode === "delivery" &&
-    optionalOutputCache.externalUpdate.deliveryOutput
-    ? optionalOutputCache.externalUpdate.deliveryOutput
-    : optionalOutputCache.externalUpdate.defaultOutput;
-
+  const actionListOutput = getOptionalOutputValue(optionalOutputCache.actionList);
   const parsedActionRows = useMemo(() => parseActionListOutput(actionListOutput), [actionListOutput]);
   const actionCount = parsedActionRows?.length ?? 0;
 
-  const activeTabOutput =
-    activeTab === "weekly"
-      ? displayedWeeklyUpdate
-      : activeTab === "actions"
-        ? actionListOutput
-        : activeTab === "internal"
-          ? internalOutput
-          : externalOutput;
+  const stakeholderOutputKey = getStakeholderOutputKey(stakeholderAudience);
+  const stakeholderCardState = optionalOutputCache[stakeholderOutputKey];
+  const stakeholderOutput = getOptionalOutputValue(stakeholderCardState);
+  const stakeholderCopyState = copyLabels[stakeholderOutputKey] ?? "Copy";
+  const stakeholderLoadingLabel =
+    stakeholderAudience === "internal"
+      ? "Generating Internal Update..."
+      : "Generating External Update...";
+  const stakeholderPlaceholderCopy =
+    stakeholderAudience === "internal"
+      ? "Your internal team update will appear here."
+      : "Your stakeholder-facing update will appear here.";
+  const isStakeholderLoading =
+    stakeholderAudience === "internal" ? isInternalLoading : isExternalLoading;
 
-  const showGeneratedIndicator = Boolean(activeTabOutput);
+  const showGeneratedIndicator =
+    activeTab === "weekly"
+      ? Boolean(displayedWeeklyUpdate)
+      : activeTab === "actions"
+        ? Boolean(actionListOutput)
+        : Boolean(stakeholderOutput);
 
   const resetSupplementaryOutputs = () => {
     setOptionalOutputCache(createInitialOptionalOutputCache());
@@ -443,7 +439,7 @@ export default function ToolPage() {
   ) => {
     if (!transcript.trim()) {
       setError(`Paste some meeting notes or a transcript before generating ${errorLabel}.`);
-      return;
+      return false;
     }
 
     setError("");
@@ -504,12 +500,14 @@ export default function ToolPage() {
       }));
 
       void prefetchDeliveryOnlyOutput(key, requestBody);
+      return true;
     } catch (optionalError) {
       setError(
         optionalError instanceof Error
           ? optionalError.message
           : `Something went wrong while generating ${errorLabel}.`
       );
+      return false;
     } finally {
       switch (key) {
         case "actionList":
@@ -526,24 +524,25 @@ export default function ToolPage() {
   };
 
   const handleGenerateActionList = async () => {
-    setActiveTab("actions");
-
-    await handleGenerateFilterableOutput("actionList", "the action list", {
+    return handleGenerateFilterableOutput("actionList", "the action list", {
       transcript,
       outputType: "action-list"
     });
   };
 
   const handleGenerateOptionalOutput = async (
-    key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate">,
+    key: StakeholderOutputKey,
     errorLabel: string
   ) => {
-    setActiveTab(key === "internalUpdate" ? "internal" : "external");
-
-    await handleGenerateFilterableOutput(key, errorLabel, {
+    const didGenerate = await handleGenerateFilterableOutput(key, errorLabel, {
       transcript,
       ...(key === "internalUpdate" ? { includeInternal: true } : { includeExternal: true })
     });
+
+    if (didGenerate) {
+      setActiveTab("stakeholder");
+      setStakeholderAudience(key === "internalUpdate" ? "internal" : "external");
+    }
   };
 
   const handleSetOptionalOutputMode = (key: OptionalOutputKey, mode: OptionalFilterMode) => {
@@ -618,6 +617,35 @@ export default function ToolPage() {
   const handleSampleClick = (value: string) => {
     setTranscript(value);
     setError("");
+  };
+
+  const handleOpenActionListTab = () => {
+    setActiveTab("actions");
+    void handleGenerateActionList();
+  };
+
+  const handleOpenStakeholderTab = (audience: StakeholderAudience = "internal") => {
+    setActiveTab("stakeholder");
+    setStakeholderAudience(audience);
+    void handleGenerateOptionalOutput(
+      getStakeholderOutputKey(audience),
+      audience === "internal" ? "the internal update" : "the external update"
+    );
+  };
+
+  const handleStakeholderAudienceChange = (audience: StakeholderAudience) => {
+    const nextKey = getStakeholderOutputKey(audience);
+    const nextCardState = optionalOutputCache[nextKey];
+    const isNextAudienceLoading = audience === "internal" ? isInternalLoading : isExternalLoading;
+
+    setStakeholderAudience(audience);
+
+    if (!nextCardState.defaultOutput && !isNextAudienceLoading) {
+      void handleGenerateOptionalOutput(
+        nextKey,
+        audience === "internal" ? "the internal update" : "the external update"
+      );
+    }
   };
 
   const handleCopy = async (key: OutputCardKey, value: string) => {
@@ -786,50 +814,22 @@ export default function ToolPage() {
           </div>
 
           <div className="mt-4 flex gap-1 overflow-x-auto border-b border-border-line px-7 mobile:px-4 mobile:whitespace-nowrap [&::-webkit-scrollbar]:hidden">
-            <button
-              type="button"
-              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
-                activeTab === "weekly"
-                  ? "border-b-bg-accent text-text-ink"
-                  : "border-b-transparent text-text-muted"
-              } mobile:text-[13px]`}
-              onClick={() => setActiveTab("weekly")}
-            >
-              Weekly update
-            </button>
-            <button
-              type="button"
-              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
-                activeTab === "actions"
-                  ? "border-b-bg-accent text-text-ink"
-                  : "border-b-transparent text-text-muted"
-              } mobile:text-[13px]`}
-              onClick={() => setActiveTab("actions")}
-            >
-              Action list{actionCount > 0 ? ` · ${actionCount}` : ""}
-            </button>
-            <button
-              type="button"
-              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
-                activeTab === "internal"
-                  ? "border-b-bg-accent text-text-ink"
-                  : "border-b-transparent text-text-muted"
-              } mobile:text-[13px]`}
-              onClick={() => setActiveTab("internal")}
-            >
-              Internal
-            </button>
-            <button
-              type="button"
-              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
-                activeTab === "external"
-                  ? "border-b-bg-accent text-text-ink"
-                  : "border-b-transparent text-text-muted"
-              } mobile:text-[13px]`}
-              onClick={() => setActiveTab("external")}
-            >
-              External
-            </button>
+            {(["weekly", "actions", "stakeholder"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
+                  activeTab === tab
+                    ? "border-b-bg-accent text-text-ink"
+                    : "border-b-transparent text-text-muted"
+                } mobile:text-[13px]`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab === "actions" && actionCount > 0
+                  ? `${tabLabels[tab]} · ${actionCount}`
+                  : tabLabels[tab]}
+              </button>
+            ))}
           </div>
 
           <div className="p-7 mobile:p-5">
@@ -1027,160 +1027,119 @@ export default function ToolPage() {
               </>
             )}
 
-            {activeTab === "internal" && (
+            {activeTab === "stakeholder" && (
               <>
-                {isInternalLoading ? (
+                {isStakeholderLoading ? (
                   <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
-                    <p className="font-sans text-[16px] text-text-muted">
-                      Generating Internal Update...
+                    <p className="font-sans text-[16px] text-text-muted animate-pulse-opacity">
+                      {stakeholderLoadingLabel}
                     </p>
                   </div>
-                ) : !internalOutput ? (
+                ) : !stakeholderOutput ? (
                   renderOptionalPlaceholder(
-                    "Internal Update",
-                    "Your internal update will appear here.",
-                    () => void handleGenerateOptionalOutput("internalUpdate", "the internal update"),
-                    "Generate Internal Update →",
-                    isInternalLoading
+                    stakeholderAudience === "internal" ? "Internal Update" : "External Update",
+                    stakeholderPlaceholderCopy,
+                    () =>
+                      void handleGenerateOptionalOutput(
+                        stakeholderOutputKey,
+                        stakeholderAudience === "internal"
+                          ? "the internal update"
+                          : "the external update"
+                      ),
+                    "Generate Stakeholder Update →",
+                    isStakeholderLoading
                   )
                 ) : (
                   <>
                     <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
-                      Internal update
+                      Stakeholder update
                     </p>
                     <div className="whitespace-pre-wrap font-sans text-[16px] leading-[1.65] text-text-ink">
-                      {internalOutput}
-                    </div>
-                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
-                      <button
-                        type="button"
-                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
-                          optionalOutputCache.internalUpdate.activeMode === "default"
-                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                            : "border border-border-line bg-bg-surface text-text-ink-soft"
-                        }`}
-                        aria-pressed={optionalOutputCache.internalUpdate.activeMode === "default"}
-                        onClick={() => handleSetOptionalOutputMode("internalUpdate", "default")}
-                      >
-                        Default
-                      </button>
-                      <button
-                        type="button"
-                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
-                          optionalOutputCache.internalUpdate.activeMode === "delivery"
-                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                            : "border border-border-line bg-bg-surface text-text-ink-soft"
-                        }`}
-                        aria-pressed={optionalOutputCache.internalUpdate.activeMode === "delivery"}
-                        onClick={() => handleSetOptionalOutputMode("internalUpdate", "delivery")}
-                        disabled={
-                          optionalOutputCache.internalUpdate.deliveryOutputLoading &&
-                          optionalOutputCache.internalUpdate.pendingMode === "delivery"
-                        }
-                      >
-                        Delivery only
-                      </button>
-                      {optionalOutputCache.internalUpdate.deliveryOutputLoading &&
-                        optionalOutputCache.internalUpdate.pendingMode === "delivery" && (
-                          <span className="font-sans text-[12px] text-text-muted">
-                            Preparing Delivery only...
-                          </span>
-                        )}
-                      {optionalOutputCache.internalUpdate.showDeliveryError && (
-                        <span className="font-sans text-[12px] text-error">
-                          Delivery only is unavailable right now.
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
-                        onClick={() => void handleCopy("internalUpdate", internalOutput)}
-                      >
-                        {copyLabels.internalUpdate === "Copied"
-                          ? "Copied ✓"
-                          : (copyLabels.internalUpdate ?? "Copy")}
-                      </button>
+                      {stakeholderOutput}
                     </div>
                   </>
                 )}
-              </>
-            )}
-
-            {activeTab === "external" && (
-              <>
-                {isExternalLoading ? (
-                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
-                    <p className="font-sans text-[16px] text-text-muted">
-                      Generating External Update...
-                    </p>
-                  </div>
-                ) : !externalOutput ? (
-                  renderOptionalPlaceholder(
-                    "External Update",
-                    "Your external update will appear here.",
-                    () => void handleGenerateOptionalOutput("externalUpdate", "the external update"),
-                    "Generate External Update →",
-                    isExternalLoading
-                  )
-                ) : (
-                  <>
-                    <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
-                      External update
-                    </p>
-                    <div className="whitespace-pre-wrap font-sans text-[16px] leading-[1.65] text-text-ink">
-                      {externalOutput}
-                    </div>
-                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
-                      <button
-                        type="button"
-                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
-                          optionalOutputCache.externalUpdate.activeMode === "default"
-                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                            : "border border-border-line bg-bg-surface text-text-ink-soft"
-                        }`}
-                        aria-pressed={optionalOutputCache.externalUpdate.activeMode === "default"}
-                        onClick={() => handleSetOptionalOutputMode("externalUpdate", "default")}
-                      >
-                        Default
-                      </button>
-                      <button
-                        type="button"
-                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
-                          optionalOutputCache.externalUpdate.activeMode === "delivery"
-                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                            : "border border-border-line bg-bg-surface text-text-ink-soft"
-                        }`}
-                        aria-pressed={optionalOutputCache.externalUpdate.activeMode === "delivery"}
-                        onClick={() => handleSetOptionalOutputMode("externalUpdate", "delivery")}
-                        disabled={
-                          optionalOutputCache.externalUpdate.deliveryOutputLoading &&
-                          optionalOutputCache.externalUpdate.pendingMode === "delivery"
-                        }
-                      >
-                        Delivery only
-                      </button>
-                      {optionalOutputCache.externalUpdate.deliveryOutputLoading &&
-                        optionalOutputCache.externalUpdate.pendingMode === "delivery" && (
-                          <span className="font-sans text-[12px] text-text-muted">
-                            Preparing Delivery only...
-                          </span>
-                        )}
-                      {optionalOutputCache.externalUpdate.showDeliveryError && (
-                        <span className="font-sans text-[12px] text-error">
-                          Delivery only is unavailable right now.
+                {(stakeholderOutput || isStakeholderLoading) && (
+                  <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
+                    <button
+                      type="button"
+                      className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                        stakeholderAudience === "internal"
+                          ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                          : "border border-border-line bg-bg-surface text-text-ink-soft"
+                      }`}
+                      aria-pressed={stakeholderAudience === "internal"}
+                      onClick={() => handleStakeholderAudienceChange("internal")}
+                      disabled={isStakeholderLoading}
+                    >
+                      Internal
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                        stakeholderAudience === "external"
+                          ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                          : "border border-border-line bg-bg-surface text-text-ink-soft"
+                      }`}
+                      aria-pressed={stakeholderAudience === "external"}
+                      onClick={() => handleStakeholderAudienceChange("external")}
+                      disabled={isStakeholderLoading}
+                    >
+                      External
+                    </button>
+                    <span
+                      aria-hidden="true"
+                      className="h-5 w-px bg-border mx-1"
+                    />
+                    <button
+                      type="button"
+                      className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                        stakeholderCardState.activeMode === "default"
+                          ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                          : "border border-border-line bg-bg-surface text-text-ink-soft"
+                      }`}
+                      aria-pressed={stakeholderCardState.activeMode === "default"}
+                      onClick={() => handleSetOptionalOutputMode(stakeholderOutputKey, "default")}
+                    >
+                      Default
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                        stakeholderCardState.activeMode === "delivery"
+                          ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                          : "border border-border-line bg-bg-surface text-text-ink-soft"
+                      }`}
+                      aria-pressed={stakeholderCardState.activeMode === "delivery"}
+                      onClick={() => handleSetOptionalOutputMode(stakeholderOutputKey, "delivery")}
+                      disabled={
+                        stakeholderCardState.deliveryOutputLoading &&
+                        stakeholderCardState.pendingMode === "delivery"
+                      }
+                    >
+                      Delivery only
+                    </button>
+                    {stakeholderCardState.deliveryOutputLoading &&
+                      stakeholderCardState.pendingMode === "delivery" && (
+                        <span className="font-sans text-[12px] text-text-muted">
+                          Preparing Delivery only...
                         </span>
                       )}
-                      <button
-                        type="button"
-                        className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
-                        onClick={() => void handleCopy("externalUpdate", externalOutput)}
-                      >
-                        {copyLabels.externalUpdate === "Copied"
-                          ? "Copied ✓"
-                          : (copyLabels.externalUpdate ?? "Copy")}
-                      </button>
-                    </div>
-                  </>
+                    {stakeholderCardState.showDeliveryError && (
+                      <span className="font-sans text-[12px] text-error">
+                        Delivery only is unavailable right now.
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
+                      onClick={() => void handleCopy(stakeholderOutputKey, stakeholderOutput)}
+                    >
+                      {stakeholderCopyState === "Copied"
+                        ? "Copied ✓"
+                        : stakeholderCopyState}
+                    </button>
+                  </div>
                 )}
               </>
             )}
@@ -1194,7 +1153,7 @@ export default function ToolPage() {
               <button
                 type="button"
                 className="rounded border border-border-line bg-bg-surface p-3 text-left"
-                onClick={() => void handleGenerateActionList()}
+                onClick={() => void handleOpenActionListTab()}
                 disabled={isActionListLoading || isWeeklyUpdateLoading}
               >
                 <span className="block font-sans text-[14px] text-text-ink">Action list</span>
@@ -1205,24 +1164,11 @@ export default function ToolPage() {
               <button
                 type="button"
                 className="rounded border border-border-line bg-bg-surface p-3 text-left"
-                onClick={() => void handleGenerateOptionalOutput("internalUpdate", "the internal update")}
+                onClick={() => void handleOpenStakeholderTab("internal")}
                 disabled={isInternalLoading || isWeeklyUpdateLoading}
               >
                 <span className="block font-sans text-[14px] text-text-ink">
-                  Internal update
-                </span>
-                <span className="mt-1 block font-mono text-mono-caption text-text-accent">
-                  + ADD
-                </span>
-              </button>
-              <button
-                type="button"
-                className="rounded border border-border-line bg-bg-surface p-3 text-left"
-                onClick={() => void handleGenerateOptionalOutput("externalUpdate", "the external update")}
-                disabled={isExternalLoading || isWeeklyUpdateLoading}
-              >
-                <span className="block font-sans text-[14px] text-text-ink">
-                  External update
+                  Stakeholder update
                 </span>
                 <span className="mt-1 block font-mono text-mono-caption text-text-accent">
                   + ADD
