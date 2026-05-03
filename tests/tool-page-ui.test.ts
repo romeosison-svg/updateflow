@@ -11,8 +11,8 @@ describe("tool page split editor redesign wiring", () => {
   it("adds local activeTab state for weekly, actions, and stakeholder", () => {
     expect(pageSource).toContain('const [activeTab, setActiveTab] = useState<ActiveTab>("weekly")');
     expect(pageSource).toContain('type ActiveTab = "weekly" | "actions" | "stakeholder"');
-    expect(pageSource).toContain(
-      'const [stakeholderAudience, setStakeholderAudience] =\n    useState<StakeholderAudience>("internal")'
+    expect(pageSource).toMatch(
+      /const \[stakeholderAudience, setStakeholderAudience\] =\s+useState<StakeholderAudience>\("internal"\);/
     );
   });
 
@@ -31,6 +31,17 @@ describe("tool page split editor redesign wiring", () => {
     expect(pageSource).toContain('activeTab === "stakeholder"');
     expect(pageSource).toContain('? "border-b-bg-accent text-text-ink"');
     expect(pageSource).toContain(': "border-b-transparent text-text-muted"');
+  });
+
+  it("derives stakeholder output state from the selected audience", () => {
+    expect(pageSource).toContain("getStakeholderOutputKey(audience: StakeholderAudience)");
+    expect(pageSource).toContain("const stakeholderOutputKey = getStakeholderOutputKey(stakeholderAudience)");
+    expect(pageSource).toMatch(
+      /stakeholderAudience === "internal"\s+\? isInternalLoading : isExternalLoading/
+    );
+    expect(pageSource).toMatch(
+      /stakeholderAudience === "internal"\s+\? "Your internal team update will appear here\."\s+: "Your stakeholder-facing update will appear here\."/
+    );
   });
 
   it("keeps weekly update handlers and events reachable from the redesigned toolbar", () => {
@@ -59,6 +70,17 @@ describe("tool page split editor redesign wiring", () => {
     expect(pageSource).toContain("Your action list will appear here.");
     expect(pageSource).toContain("Your internal team update will appear here.");
     expect(pageSource).toContain("Your stakeholder-facing update will appear here.");
+  });
+
+  it("routes stakeholder generation through the unified tab and audience state", () => {
+    expect(pageSource).toContain("const handleStakeholderAudienceChange = (audience: StakeholderAudience) => {");
+    expect(pageSource).toContain("if (!nextCardState.defaultOutput && !isNextAudienceLoading) {");
+    expect(pageSource).toContain('setActiveTab("stakeholder")');
+    expect(pageSource).toContain(
+      'setStakeholderAudience(key === "internalUpdate" ? "internal" : "external")'
+    );
+    expect(pageSource).toContain("Generate Stakeholder Update");
+    expect(pageSource).toContain("Stakeholder Update");
   });
 
   it("keeps the action output section heading as 'Actions'", () => {
