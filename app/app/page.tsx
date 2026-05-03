@@ -1,8 +1,9 @@
 "use client";
 
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
+
 import {
   getAddToPackAnalyticsType,
   getCopiedOutputAnalyticsType
@@ -21,19 +22,19 @@ const sampleTranscripts = [
     id: "migration-week",
     label: "migration week",
     transcript:
-      "Monday: Confirmed cutover window with infrastructure team for Saturday night. Vendor yet to provide final environment sign-off.\n\nTuesday: Sign-off still outstanding. Escalated to vendor account manager. Parallel workstream leads asked to review dependencies ahead of cutover.\n\nWednesday: Vendor confirmed environment ready. UAT entry criteria reviewed with QA lead â€” two outstanding defects flagged as potential blockers. Decision to defer lower-priority defect and proceed with UAT.\n\nThursday: UAT started. First round of test cases passed. One defect raised against the reporting module â€” under investigation. Client stakeholder briefed on status.\n\nFriday: UAT progressing. Reporting defect confirmed as low severity and deferred to post-go-live. Cutover plan confirmed for Saturday. Communications drafted and ready to send."
+      "Monday: Confirmed cutover window with infrastructure team for Saturday night. Vendor yet to provide final environment sign-off.\n\nTuesday: Sign-off still outstanding. Escalated to vendor account manager. Parallel workstream leads asked to review dependencies ahead of cutover.\n\nWednesday: Vendor confirmed environment ready. UAT entry criteria reviewed with QA lead - two outstanding defects flagged as potential blockers. Decision to defer lower-priority defect and proceed with UAT.\n\nThursday: UAT started. First round of test cases passed. One defect raised against the reporting module - under investigation. Client stakeholder briefed on status.\n\nFriday: UAT progressing. Reporting defect confirmed as low severity and deferred to post-go-live. Cutover plan confirmed for Saturday. Communications drafted and ready to send."
   },
   {
     id: "programme-update",
     label: "programme update",
     transcript:
-      "Monday: Kick-off for new workstream completed. Three work packages assigned to stream leads. Resource gap identified in data migration track â€” flagged to PMO.\n\nTuesday: Data migration resource confirmed for two days per week. Dependencies mapped across all three workstreams. Risk log updated.\n\nWednesday: Steering group prep completed. Deck reviewed with sponsor. Two decisions required from steering: budget approval for additional QA resource and sign-off on revised go-live date.\n\nThursday: Steering group held. Budget approved. Go-live date moved to end of next month â€” agreed by all parties. Stream leads notified and plans being updated.\n\nFriday: Updated programme plan circulated. One stream lead flagged a risk around third-party API readiness. Added to RAID. Next week focus is confirming integration test schedule."
+      "Monday: Kick-off for new workstream completed. Three work packages assigned to stream leads. Resource gap identified in data migration track - flagged to PMO.\n\nTuesday: Data migration resource confirmed for two days per week. Dependencies mapped across all three workstreams. Risk log updated.\n\nWednesday: Steering group prep completed. Deck reviewed with sponsor. Two decisions required from steering: budget approval for additional QA resource and sign-off on revised go-live date.\n\nThursday: Steering group held. Budget approved. Go-live date moved to end of next month - agreed by all parties. Stream leads notified and plans being updated.\n\nFriday: Updated programme plan circulated. One stream lead flagged a risk around third-party API readiness. Added to RAID. Next week focus is confirming integration test schedule."
   },
   {
     id: "delivery-risk",
     label: "delivery risk",
     transcript:
-      "- API integration delayed â€” vendor missed agreed delivery date\n- QA resource stretched across two workstreams this sprint\n- UAT entry criteria not yet signed off by client\n- Risk to UAT start date if API not delivered by Wednesday\n- PM to confirm revised timeline with vendor tomorrow"
+      "- API integration delayed - vendor missed agreed delivery date\n- QA resource stretched across two workstreams this sprint\n- UAT entry criteria not yet signed off by client\n- Risk to UAT start date if API not delivered by Wednesday\n- PM to confirm revised timeline with vendor tomorrow"
   },
   {
     id: "action-heavy-week",
@@ -42,10 +43,6 @@ const sampleTranscripts = [
       "- Sarah to send updated RAID log by end of day Friday\n- Tom to confirm resource availability for integration workstream next week\n- Client to provide final sign-off on UAT test cases before Thursday\n- Team agreed to defer two lower-priority defects from release scope\n- Go-live readiness review scheduled for next Monday at 10am\n- Dependency on client security team for SSO approval still outstanding"
   }
 ] as const;
-
-const outputCards: Array<{ key: Extract<OutputCardKey, "shortStatus">; title: string }> = [
-  { key: "shortStatus", title: "Weekly Update" }
-];
 
 const optionalOutputCards: Array<{
   buttonLabel: string;
@@ -75,6 +72,8 @@ const optionalOutputCards: Array<{
 
 type OptionalOutputKey = (typeof optionalOutputCards)[number]["key"];
 type OptionalFilterMode = "default" | "delivery";
+type ActiveTab = "weekly" | "actions" | "internal" | "external";
+type WeeklyLengthMode = "default" | "shorter" | "more_detail";
 
 type OptionalOutputCacheState = {
   activeMode: OptionalFilterMode;
@@ -87,6 +86,14 @@ type OptionalOutputCacheState = {
 };
 
 type OptionalOutputCache = Record<OptionalOutputKey, OptionalOutputCacheState>;
+
+type ParsedActionRow = {
+  action: string;
+  due: string;
+  number: string;
+  owner: string;
+  priority: string;
+};
 
 function createEmptyOptionalOutputCacheState(): OptionalOutputCacheState {
   return {
@@ -119,6 +126,62 @@ function getDeliveryFilterOutputType(key: OptionalOutputKey) {
   }
 }
 
+function parseActionListOutput(output: string): ParsedActionRow[] | null {
+  const trimmedOutput = output.trim();
+
+  if (!trimmedOutput) {
+    return [];
+  }
+
+  const blocks = trimmedOutput
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  if (blocks.length === 0) {
+    return null;
+  }
+
+  const rows = blocks.map((block) => {
+    const lines = block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const actionMatch = lines[0]?.match(/^(\d+)\.\s*(.+)$/);
+    const ownerMatch = lines.find((line) => line.startsWith("Owner:"))?.replace(/^Owner:\s*/, "");
+    const priorityMatch = lines
+      .find((line) => line.startsWith("Priority:"))
+      ?.replace(/^Priority:\s*/, "");
+
+    if (!actionMatch || !ownerMatch || !priorityMatch) {
+      return null;
+    }
+
+    return {
+      number: actionMatch[1],
+      action: actionMatch[2],
+      owner: ownerMatch,
+      priority: priorityMatch,
+      // Spec gap: action-list generation does not currently return due dates, so the
+      // split-editor table renders a neutral placeholder rather than inventing data.
+      due: "—"
+    };
+  });
+
+  return rows.every(Boolean) ? (rows as ParsedActionRow[]) : null;
+}
+
+function getPriorityPillClasses(priority: string) {
+  const normalisedPriority = priority.toLowerCase();
+
+  if (normalisedPriority.startsWith("high")) {
+    return "bg-bg-accent-soft text-text-accent";
+  }
+
+  if (normalisedPriority.startsWith("med")) {
+    return "bg-border-line-soft text-text-ink-soft";
+  }
+
+  return "border border-border-line bg-transparent text-text-muted";
+}
+
 export default function ToolPage() {
   const posthog = usePostHog();
   const [transcript, setTranscript] = useState("");
@@ -137,26 +200,37 @@ export default function ToolPage() {
   const [optionalOutputCache, setOptionalOutputCache] = useState<OptionalOutputCache>(
     createInitialOptionalOutputCache()
   );
+  const [activeTab, setActiveTab] = useState<ActiveTab>("weekly");
+  // Spec gap: the existing weekly-update flow stores current text but not a canonical
+  // "shorter vs more detail" mode, so this UI-only state tracks the last selected view.
+  const [weeklyLengthMode, setWeeklyLengthMode] = useState<WeeklyLengthMode>("default");
 
-  const primaryBtn =
-    "inline-flex items-center justify-center py-3 px-6 bg-gradient-to-b from-[#0f8080] to-[#0a5f63] text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors transition-shadow duration-200 shadow-[0_2px_6px_rgba(13,115,119,0.35)] enabled:hover:bg-accent-hover enabled:hover:shadow-[0_4px_12px_rgba(13,115,119,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+  const actionListOutput = optionalOutputCache.actionList.activeMode === "delivery" &&
+    optionalOutputCache.actionList.deliveryOutput
+    ? optionalOutputCache.actionList.deliveryOutput
+    : optionalOutputCache.actionList.defaultOutput;
+  const internalOutput = optionalOutputCache.internalUpdate.activeMode === "delivery" &&
+    optionalOutputCache.internalUpdate.deliveryOutput
+    ? optionalOutputCache.internalUpdate.deliveryOutput
+    : optionalOutputCache.internalUpdate.defaultOutput;
+  const externalOutput = optionalOutputCache.externalUpdate.activeMode === "delivery" &&
+    optionalOutputCache.externalUpdate.deliveryOutput
+    ? optionalOutputCache.externalUpdate.deliveryOutput
+    : optionalOutputCache.externalUpdate.defaultOutput;
 
-  const secondaryBtn =
-    "inline-flex items-center justify-center py-3 px-5 bg-transparent text-accent text-[0.9rem] font-medium tracking-[0.01em] border-[1.5px] border-accent rounded-input font-sans cursor-pointer transition-colors duration-150 enabled:hover:bg-accent-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+  const parsedActionRows = useMemo(() => parseActionListOutput(actionListOutput), [actionListOutput]);
+  const actionCount = parsedActionRows?.length ?? 0;
 
-  const copyBtn =
-    "inline-flex items-center justify-center py-[0.35rem] px-3 text-[0.8rem] font-medium text-muted bg-transparent border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:text-accent hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+  const activeTabOutput =
+    activeTab === "weekly"
+      ? displayedWeeklyUpdate
+      : activeTab === "actions"
+        ? actionListOutput
+        : activeTab === "internal"
+          ? internalOutput
+          : externalOutput;
 
-  const activeToggleBtn = `${copyBtn} border-accent text-accent bg-accent-light`;
-
-  const cardClasses =
-    "bg-card border border-border rounded-control p-6 mobile:p-4 mobile:rounded-card shadow-[0_2px_8px_rgba(0,0,0,0.06)]";
-
-  const outputHeaderClasses =
-    "flex items-center justify-between gap-4 pb-3 border-b border-border mb-4 mobile:grid mobile:grid-cols-1";
-
-  const outputPanelBase =
-    "min-h-[260px] p-4 border border-border rounded-control bg-card";
+  const showGeneratedIndicator = Boolean(activeTabOutput);
 
   const resetSupplementaryOutputs = () => {
     setOptionalOutputCache(createInitialOptionalOutputCache());
@@ -259,6 +333,8 @@ export default function ToolPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActiveTab("weekly");
+    setWeeklyLengthMode("default");
 
     await generateWeeklyUpdate({
       captureGenerateEvent: true,
@@ -336,8 +412,8 @@ export default function ToolPage() {
           }
         };
       });
-    } catch (error) {
-      console.error("prefetchDeliveryOnlyOutput failed for", key, error);
+    } catch (prefetchError) {
+      console.error("prefetchDeliveryOnlyOutput failed for", key, prefetchError);
       setOptionalOutputCache((current) => {
         const nextCard = current[key];
 
@@ -450,6 +526,8 @@ export default function ToolPage() {
   };
 
   const handleGenerateActionList = async () => {
+    setActiveTab("actions");
+
     await handleGenerateFilterableOutput("actionList", "the action list", {
       transcript,
       outputType: "action-list"
@@ -460,6 +538,8 @@ export default function ToolPage() {
     key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate">,
     errorLabel: string
   ) => {
+    setActiveTab(key === "internalUpdate" ? "internal" : "external");
+
     await handleGenerateFilterableOutput(key, errorLabel, {
       transcript,
       ...(key === "internalUpdate" ? { includeInternal: true } : { includeExternal: true })
@@ -576,280 +656,580 @@ export default function ToolPage() {
     }
   };
 
+  const handleWeeklyLengthClick = async (mode: WeeklyLengthMode) => {
+    if (mode === "default") {
+      setWeeklyLengthMode("default");
+      await handleResetToDefault();
+      return;
+    }
+
+    setWeeklyLengthMode(mode);
+    await handleAdjustWeeklyUpdateLength(mode);
+  };
+
+  const renderOptionalPlaceholder = (
+    title: string,
+    description: string,
+    action: () => void,
+    label: string,
+    isLoading: boolean
+  ) => (
+    <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-center mobile:min-h-[220px]">
+      <p className="font-sans text-[16px] text-text-muted">{description}</p>
+      <button
+        className="rounded border border-border-line bg-bg-surface px-4 py-[10px] font-sans text-[14px] font-medium text-text-ink-soft"
+        onClick={action}
+        type="button"
+      >
+        {isLoading ? `Generating ${title}...` : label}
+      </button>
+    </div>
+  );
+
   return (
-    <main className="w-[min(960px,calc(100%_-_2rem))] mobile:w-[min(calc(100%_-_1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8">
-      <section className="hero mb-6">
-        <Link
-          className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase font-sans no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
-          href="/"
-        >
-          For project managers
-        </Link>
-        <h1 className="m-0 max-w-[12ch] mobile:max-w-none text-[clamp(2.5rem,6vw,4.5rem)] leading-tight text-text font-bold">
-          Paste your notes. Get your weekly update.
-        </h1>
-        <p className="mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
-          Paste rough notes, get your weekly update in seconds, then add what you need.
-        </p>
-      </section>
+    <main className="min-h-screen bg-bg-paper text-text-ink">
+      <header className="border-b border-border-line bg-bg-surface px-7 py-4 mobile:px-4 mobile:py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center text-[14px] mobile:text-[15px]">
+            <span className="font-sans font-bold text-text-ink">Updateflow</span>
+            <span className="text-text-muted">.ai</span>
+            <span className="ml-3 rounded-full border border-border-line px-2 py-[3px] font-mono text-mono-caption text-text-muted">
+              w/c 28 apr
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="font-sans text-[13px] text-text-muted mobile:hidden">
+              Names anonymised
+            </span>
+            <span className="mx-3 h-4 w-px bg-line mobile:hidden" />
+            <span className="ml-3 flex h-7 w-7 items-center justify-center rounded-full bg-ink font-mono text-mono-caption text-bg-paper">
+              JR
+            </span>
+          </div>
+        </div>
+      </header>
 
-      <div className="grid gap-5">
-        <section className={`${cardClasses} hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200`}>
-          <form className="grid gap-3" onSubmit={handleSubmit}>
-            <label className="grid gap-[0.55rem]">
-              <span className="font-sans text-[0.95rem] font-semibold">
-                Meeting notes or transcript
-              </span>
-              <small className="text-muted font-sans text-[0.88rem] leading-base">
-                Works best with sanitised notes, or paste freely and let the output
-                handle it.
-              </small>
-              <textarea
-                className="w-full min-h-[320px] p-4 resize-y leading-base border border-border rounded-input bg-bg text-text font-sans transition-colors duration-150 focus-visible:border-[#0d7377] focus-visible:outline-none"
-                value={transcript}
-                onChange={(event) => setTranscript(event.target.value)}
-                placeholder="Paste your notes from this week: rough bullets, Copilot or Zoom summaries, Teams notes, or anything from the meeting."
-                rows={14}
-              />
-            </label>
-
-            <p className={`text-right font-sans text-[0.82rem] ${transcript.length > 22500 ? "text-error" : "text-muted"}`}>
+      <div className="grid min-h-[920px] grid-cols-[1fr_1.1fr] border-t border-border-line mobile:flex mobile:flex-col">
+        <section className="border-r border-border-line bg-bg-paper mobile:border-r-0">
+          <div className="flex items-center justify-between px-7 pb-4 pt-5 mobile:px-4">
+            <span className="font-mono text-mono-caption uppercase tracking-[0.1em] text-text-muted">
+              ① Paste notes
+            </span>
+            <span className="font-mono text-mono-caption text-text-muted">
               {transcript.length.toLocaleString()} / 25,000
-            </p>
+            </span>
+          </div>
 
-            <p className="m-0 text-muted font-sans text-[0.82rem] font-semibold tracking-[0.02em]">
-              Examples
-            </p>
-            <div className="flex flex-wrap gap-3 mobile:grid mobile:grid-cols-1" aria-label="Sample transcript buttons">
-              {sampleTranscripts.map((sample) => (
+          <div className="flex flex-wrap gap-2 px-7 pb-4 mobile:px-4">
+            {sampleTranscripts.map((sample) => {
+              const isActive = transcript === sample.transcript;
+
+              return (
                 <button
                   key={sample.id}
                   type="button"
-                  className="inline-flex items-center py-[0.55rem] px-4 bg-card text-muted text-[0.8rem] font-medium border border-border rounded-input font-sans cursor-pointer transition-colors duration-150 hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
+                  className={`rounded-full px-[10px] py-[5px] font-mono text-mono-caption ${
+                    isActive
+                      ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                      : "border border-border-line bg-bg-surface text-text-ink-soft"
+                  }`}
                   onClick={() => handleSampleClick(sample.transcript)}
                 >
                   {sample.label}
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            <div className="flex flex-wrap items-center gap-y-3 gap-x-4">
-              <button className={primaryBtn} type="submit" disabled={isWeeklyUpdateLoading}>
-                {isWeeklyUpdateLoading ? "Generating weekly update..." : "Generate weekly update"}
-              </button>
-              {error && <p className="m-0 text-error text-[0.88rem] font-sans">{error}</p>}
-            </div>
-          </form>
+          <div className="flex h-full flex-col px-7 pb-7 mobile:px-4 mobile:pb-5">
+            <form className="flex h-full flex-col" onSubmit={handleSubmit}>
+              <textarea
+                className="min-h-[240px] flex-1 resize-none whitespace-pre-wrap rounded border border-border-line bg-bg-surface p-[18px] font-mono text-mono-input leading-[1.65] text-text-ink-soft mobile:max-h-[180px] mobile:text-mono-caption"
+                value={transcript}
+                onChange={(event) => setTranscript(event.target.value)}
+                placeholder="Paste your notes from this week: rough bullets, Copilot or Zoom summaries, Teams notes, or anything from the meeting."
+              />
+              <div className="mt-4 flex items-center gap-3 mobile:flex-col mobile:items-stretch">
+                <button
+                  className="rounded bg-bg-accent px-4 py-[10px] font-sans text-[14px] font-medium text-text-accent-ink disabled:cursor-not-allowed disabled:opacity-60 mobile:w-full"
+                  type="submit"
+                  disabled={isWeeklyUpdateLoading}
+                >
+                  {isWeeklyUpdateLoading
+                    ? "Generating weekly update..."
+                    : "Generate weekly update →"}
+                </button>
+                <span className="font-mono text-mono-caption text-text-muted mobile:hidden">
+                  ⌘↵ to run
+                </span>
+                <span className="ml-auto font-sans text-[12px] text-text-muted mobile:hidden">
+                  Names anonymised on output
+                </span>
+              </div>
+              {error && (
+                <p className="mt-2 font-sans text-[13px] text-error">{error}</p>
+              )}
+            </form>
+          </div>
         </section>
 
-        <section className="grid gap-5">
-          {outputCards.map((card) => {
-            const value = displayedWeeklyUpdate;
-            const copyState = copyLabels[card.key] ?? "Copy";
+        <section className="bg-bg-surface">
+          <div className="flex items-center justify-between px-7 pb-0 pt-5 mobile:px-4">
+            <span className="font-mono text-mono-caption uppercase tracking-[0.1em] text-text-muted">
+              ② This week&apos;s documents
+            </span>
+            {showGeneratedIndicator && (
+              <span className="font-mono text-mono-caption text-text-accent">
+                ● generated 0:21
+              </span>
+            )}
+          </div>
 
-            return (
-              <section key={card.key} className={`${cardClasses} grid gap-4`}>
-                <div className={outputHeaderClasses}>
-                  <div>
-                    <h2 className="m-0 text-2xl font-semibold">{card.title}</h2>
-                  </div>
-                  <button
-                    type="button"
-                    className={copyBtn}
-                    onClick={() => handleCopy(card.key, value)}
-                    disabled={!value}
-                  >
-                    {copyState}
-                    <span aria-live="polite" className="sr-only">
-                      {copyState === "Copied" ? "Copied to clipboard" : ""}
-                    </span>
-                  </button>
-                </div>
+          <div className="mt-4 flex gap-1 overflow-x-auto border-b border-border-line px-7 mobile:px-4 mobile:whitespace-nowrap [&::-webkit-scrollbar]:hidden">
+            <button
+              type="button"
+              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
+                activeTab === "weekly"
+                  ? "border-b-bg-accent text-text-ink"
+                  : "border-b-transparent text-text-muted"
+              } mobile:text-[13px]`}
+              onClick={() => setActiveTab("weekly")}
+            >
+              Weekly update
+            </button>
+            <button
+              type="button"
+              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
+                activeTab === "actions"
+                  ? "border-b-bg-accent text-text-ink"
+                  : "border-b-transparent text-text-muted"
+              } mobile:text-[13px]`}
+              onClick={() => setActiveTab("actions")}
+            >
+              Action list{actionCount > 0 ? ` · ${actionCount}` : ""}
+            </button>
+            <button
+              type="button"
+              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
+                activeTab === "internal"
+                  ? "border-b-bg-accent text-text-ink"
+                  : "border-b-transparent text-text-muted"
+              } mobile:text-[13px]`}
+              onClick={() => setActiveTab("internal")}
+            >
+              Internal
+            </button>
+            <button
+              type="button"
+              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
+                activeTab === "external"
+                  ? "border-b-bg-accent text-text-ink"
+                  : "border-b-transparent text-text-muted"
+              } mobile:text-[13px]`}
+              onClick={() => setActiveTab("external")}
+            >
+              External
+            </button>
+          </div>
 
-                <div className={`${outputPanelBase}${!value ? " grid place-items-center" : ""}`}>
-                  {isWeeklyUpdateLoading ? (
-                    <p className="m-0 text-muted text-base font-sans animate-pulse-opacity">
-                      Generating weekly update...
+          <div className="p-7 mobile:p-5">
+            {activeTab === "weekly" && (
+              <>
+                {!displayedWeeklyUpdate ? (
+                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
+                    <p className="font-sans text-[16px] text-text-muted">
+                      Your weekly update will appear here.
                     </p>
-                  ) : value ? (
-                    <pre className="m-0 whitespace-pre-wrap break-words text-base font-sans leading-base">
-                      {value}
-                    </pre>
-                  ) : (
-                    <p className="m-0 text-muted text-base font-sans">
-                      Your 2-3 sentence weekly update will appear here.
-                    </p>
-                  )}
-                </div>
-
-                {value && (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className={copyBtn}
-                      onClick={() => handleAdjustWeeklyUpdateLength("shorter")}
-                      disabled={isWeeklyUpdateLoading}
-                    >
-                      Shorter
-                    </button>
-                    <button
-                      type="button"
-                      className={copyBtn}
-                      onClick={() => handleAdjustWeeklyUpdateLength("more_detail")}
-                      disabled={isWeeklyUpdateLoading}
-                    >
-                      More detail
-                    </button>
-                    <button
-                      type="button"
-                      className={copyBtn}
-                      onClick={handleResetToDefault}
-                      disabled={isWeeklyUpdateLoading || !defaultWeeklyUpdate}
-                    >
-                      Reset to default
-                    </button>
                   </div>
+                ) : (
+                  <>
+                    <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
+                      Weekly update
+                    </p>
+                    <div className="whitespace-pre-wrap font-sans text-[16px] leading-[1.65] text-text-ink">
+                      {displayedWeeklyUpdate}
+                    </div>
+                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
+                      <button
+                        type="button"
+                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                          weeklyLengthMode === "shorter"
+                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                            : "border border-border-line bg-bg-surface text-text-ink-soft"
+                        }`}
+                        onClick={() => void handleWeeklyLengthClick("shorter")}
+                        disabled={isWeeklyUpdateLoading}
+                      >
+                        Shorter
+                      </button>
+                      <button
+                        type="button"
+                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                          weeklyLengthMode === "default"
+                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                            : "border border-border-line bg-bg-surface text-text-ink-soft"
+                        }`}
+                        onClick={() => void handleWeeklyLengthClick("default")}
+                        disabled={isWeeklyUpdateLoading}
+                      >
+                        Default
+                      </button>
+                      <button
+                        type="button"
+                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                          weeklyLengthMode === "more_detail"
+                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                            : "border border-border-line bg-bg-surface text-text-ink-soft"
+                        }`}
+                        onClick={() => void handleWeeklyLengthClick("more_detail")}
+                        disabled={isWeeklyUpdateLoading}
+                      >
+                        More detail
+                      </button>
+                      <span className="mx-1 h-4 w-px self-center bg-line mobile:hidden" />
+                      <button
+                        type="button"
+                        className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
+                        onClick={() => void handleCopy("shortStatus", displayedWeeklyUpdate)}
+                      >
+                        {copyLabels.shortStatus === "Copied"
+                          ? "Copied ✓"
+                          : (copyLabels.shortStatus ?? "Copy")}
+                      </button>
+                    </div>
+                  </>
                 )}
-              </section>
-            );
-          })}
+              </>
+            )}
 
-          <section className="grid gap-3">
-            <p className="m-0 text-muted font-sans text-[0.82rem] font-semibold tracking-[0.02em]">
+            {activeTab === "actions" && (
+              <>
+                {isActionListLoading ? (
+                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
+                    <p className="font-sans text-[16px] text-text-muted">
+                      Generating Action List...
+                    </p>
+                  </div>
+                ) : !actionListOutput ? (
+                  <>
+                    {/* Spec gap: the redesign does not define a desktop control for generating
+                        optional outputs, so each optional tab exposes its existing handler
+                        through a local placeholder action to keep add-to-pack flows reachable. */}
+                    {renderOptionalPlaceholder(
+                      "Action List",
+                      "Your action list will appear here.",
+                      () => void handleGenerateActionList(),
+                      "Generate Action List →",
+                      isActionListLoading
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
+                      Actions
+                    </p>
+                    {parsedActionRows ? (
+                      <div className="grid gap-0">
+                        {parsedActionRows.map((row) => (
+                          <div
+                            key={`${row.number}-${row.action}`}
+                            className="grid grid-cols-[20px_80px_1fr_90px_70px] items-center gap-[14px] border-b border-border-line-soft py-3 mobile:block"
+                          >
+                            <div className="font-mono text-[12px] text-text-muted mobile:hidden">
+                              {row.number}
+                            </div>
+                            <div className="font-sans text-[14px] font-semibold text-text-ink mobile:mb-1 mobile:flex mobile:items-center mobile:justify-between">
+                              <span>{row.owner}</span>
+                              <span className="hidden mobile:flex mobile:items-center mobile:gap-2">
+                                <span className="font-mono text-[12px] font-normal text-text-muted">
+                                  {row.due}
+                                </span>
+                                <span
+                                  className={`rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
+                                >
+                                  {row.priority}
+                                </span>
+                              </span>
+                            </div>
+                            <div className="font-sans text-[14px] text-text-ink-soft mobile:pl-6 mobile:text-[13px]">
+                              {row.action}
+                            </div>
+                            <div className="font-mono text-[12px] text-text-muted mobile:hidden">
+                              {row.due}
+                            </div>
+                            <div className="mobile:hidden">
+                              <span
+                                className={`rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
+                              >
+                                {row.priority}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="whitespace-pre-wrap font-sans text-[16px] leading-[1.65] text-text-ink">
+                        {actionListOutput}
+                      </div>
+                    )}
+                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
+                      <button
+                        type="button"
+                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                          optionalOutputCache.actionList.activeMode === "default"
+                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                            : "border border-border-line bg-bg-surface text-text-ink-soft"
+                        }`}
+                        aria-pressed={optionalOutputCache.actionList.activeMode === "default"}
+                        onClick={() => handleSetOptionalOutputMode("actionList", "default")}
+                      >
+                        Default
+                      </button>
+                      <button
+                        type="button"
+                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                          optionalOutputCache.actionList.activeMode === "delivery"
+                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                            : "border border-border-line bg-bg-surface text-text-ink-soft"
+                        }`}
+                        aria-pressed={optionalOutputCache.actionList.activeMode === "delivery"}
+                        onClick={() => handleSetOptionalOutputMode("actionList", "delivery")}
+                        disabled={
+                          optionalOutputCache.actionList.deliveryOutputLoading &&
+                          optionalOutputCache.actionList.pendingMode === "delivery"
+                        }
+                      >
+                        Delivery only
+                      </button>
+                      {optionalOutputCache.actionList.deliveryOutputLoading &&
+                        optionalOutputCache.actionList.pendingMode === "delivery" && (
+                          <span className="font-sans text-[12px] text-text-muted">
+                            Preparing Delivery only...
+                          </span>
+                        )}
+                      {optionalOutputCache.actionList.showDeliveryError && (
+                        <span className="font-sans text-[12px] text-error">
+                          Delivery only is unavailable right now.
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
+                        onClick={() => void handleCopy("actionList", actionListOutput)}
+                      >
+                        {copyLabels.actionList === "Copied"
+                          ? "Copied ✓"
+                          : (copyLabels.actionList ?? "Copy")}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {activeTab === "internal" && (
+              <>
+                {isInternalLoading ? (
+                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
+                    <p className="font-sans text-[16px] text-text-muted">
+                      Generating Internal Update...
+                    </p>
+                  </div>
+                ) : !internalOutput ? (
+                  renderOptionalPlaceholder(
+                    "Internal Update",
+                    "Your internal update will appear here.",
+                    () => void handleGenerateOptionalOutput("internalUpdate", "the internal update"),
+                    "Generate Internal Update →",
+                    isInternalLoading
+                  )
+                ) : (
+                  <>
+                    <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
+                      Internal update
+                    </p>
+                    <div className="whitespace-pre-wrap font-sans text-[16px] leading-[1.65] text-text-ink">
+                      {internalOutput}
+                    </div>
+                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
+                      <button
+                        type="button"
+                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                          optionalOutputCache.internalUpdate.activeMode === "default"
+                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                            : "border border-border-line bg-bg-surface text-text-ink-soft"
+                        }`}
+                        aria-pressed={optionalOutputCache.internalUpdate.activeMode === "default"}
+                        onClick={() => handleSetOptionalOutputMode("internalUpdate", "default")}
+                      >
+                        Default
+                      </button>
+                      <button
+                        type="button"
+                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                          optionalOutputCache.internalUpdate.activeMode === "delivery"
+                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                            : "border border-border-line bg-bg-surface text-text-ink-soft"
+                        }`}
+                        aria-pressed={optionalOutputCache.internalUpdate.activeMode === "delivery"}
+                        onClick={() => handleSetOptionalOutputMode("internalUpdate", "delivery")}
+                        disabled={
+                          optionalOutputCache.internalUpdate.deliveryOutputLoading &&
+                          optionalOutputCache.internalUpdate.pendingMode === "delivery"
+                        }
+                      >
+                        Delivery only
+                      </button>
+                      {optionalOutputCache.internalUpdate.deliveryOutputLoading &&
+                        optionalOutputCache.internalUpdate.pendingMode === "delivery" && (
+                          <span className="font-sans text-[12px] text-text-muted">
+                            Preparing Delivery only...
+                          </span>
+                        )}
+                      {optionalOutputCache.internalUpdate.showDeliveryError && (
+                        <span className="font-sans text-[12px] text-error">
+                          Delivery only is unavailable right now.
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
+                        onClick={() => void handleCopy("internalUpdate", internalOutput)}
+                      >
+                        {copyLabels.internalUpdate === "Copied"
+                          ? "Copied ✓"
+                          : (copyLabels.internalUpdate ?? "Copy")}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {activeTab === "external" && (
+              <>
+                {isExternalLoading ? (
+                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
+                    <p className="font-sans text-[16px] text-text-muted">
+                      Generating External Update...
+                    </p>
+                  </div>
+                ) : !externalOutput ? (
+                  renderOptionalPlaceholder(
+                    "External Update",
+                    "Your external update will appear here.",
+                    () => void handleGenerateOptionalOutput("externalUpdate", "the external update"),
+                    "Generate External Update →",
+                    isExternalLoading
+                  )
+                ) : (
+                  <>
+                    <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
+                      External update
+                    </p>
+                    <div className="whitespace-pre-wrap font-sans text-[16px] leading-[1.65] text-text-ink">
+                      {externalOutput}
+                    </div>
+                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
+                      <button
+                        type="button"
+                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                          optionalOutputCache.externalUpdate.activeMode === "default"
+                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                            : "border border-border-line bg-bg-surface text-text-ink-soft"
+                        }`}
+                        aria-pressed={optionalOutputCache.externalUpdate.activeMode === "default"}
+                        onClick={() => handleSetOptionalOutputMode("externalUpdate", "default")}
+                      >
+                        Default
+                      </button>
+                      <button
+                        type="button"
+                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                          optionalOutputCache.externalUpdate.activeMode === "delivery"
+                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                            : "border border-border-line bg-bg-surface text-text-ink-soft"
+                        }`}
+                        aria-pressed={optionalOutputCache.externalUpdate.activeMode === "delivery"}
+                        onClick={() => handleSetOptionalOutputMode("externalUpdate", "delivery")}
+                        disabled={
+                          optionalOutputCache.externalUpdate.deliveryOutputLoading &&
+                          optionalOutputCache.externalUpdate.pendingMode === "delivery"
+                        }
+                      >
+                        Delivery only
+                      </button>
+                      {optionalOutputCache.externalUpdate.deliveryOutputLoading &&
+                        optionalOutputCache.externalUpdate.pendingMode === "delivery" && (
+                          <span className="font-sans text-[12px] text-text-muted">
+                            Preparing Delivery only...
+                          </span>
+                        )}
+                      {optionalOutputCache.externalUpdate.showDeliveryError && (
+                        <span className="font-sans text-[12px] text-error">
+                          Delivery only is unavailable right now.
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
+                        onClick={() => void handleCopy("externalUpdate", externalOutput)}
+                      >
+                        {copyLabels.externalUpdate === "Copied"
+                          ? "Copied ✓"
+                          : (copyLabels.externalUpdate ?? "Copy")}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          <section className="hidden border-t border-border-line px-4 py-5 mobile:block">
+            <p className="font-mono text-mono-caption uppercase tracking-[0.08em] text-text-muted">
               Add to your pack
             </p>
-            <div className="flex justify-start flex-wrap gap-3">
-              {optionalOutputCards.map((card) => {
-                const isLoading =
-                  card.key === "actionList"
-                    ? isActionListLoading
-                    : card.key === "internalUpdate"
-                      ? isInternalLoading
-                      : isExternalLoading;
-
-                const loadingLabel =
-                  card.key === "actionList"
-                    ? "Generating Action List..."
-                    : card.key === "internalUpdate"
-                      ? "Generating Internal Update..."
-                      : "Generating External Update...";
-
-                return (
-                  <button
-                    key={card.key}
-                    type="button"
-                    className={`${secondaryBtn} mobile:w-full`}
-                    onClick={() =>
-                      card.key === "actionList"
-                        ? handleGenerateActionList()
-                        : handleGenerateOptionalOutput(card.key, card.errorLabel)
-                    }
-                    disabled={isWeeklyUpdateLoading || isLoading}
-                  >
-                    {isLoading ? loadingLabel : card.buttonLabel}
-                  </button>
-                );
-              })}
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                className="rounded border border-border-line bg-bg-surface p-3 text-left"
+                onClick={() => void handleGenerateActionList()}
+                disabled={isActionListLoading || isWeeklyUpdateLoading}
+              >
+                <span className="block font-sans text-[14px] text-text-ink">Action list</span>
+                <span className="mt-1 block font-mono text-mono-caption text-text-accent">
+                  + ADD
+                </span>
+              </button>
+              <button
+                type="button"
+                className="rounded border border-border-line bg-bg-surface p-3 text-left"
+                onClick={() => void handleGenerateOptionalOutput("internalUpdate", "the internal update")}
+                disabled={isInternalLoading || isWeeklyUpdateLoading}
+              >
+                <span className="block font-sans text-[14px] text-text-ink">
+                  Internal update
+                </span>
+                <span className="mt-1 block font-mono text-mono-caption text-text-accent">
+                  + ADD
+                </span>
+              </button>
+              <button
+                type="button"
+                className="rounded border border-border-line bg-bg-surface p-3 text-left"
+                onClick={() => void handleGenerateOptionalOutput("externalUpdate", "the external update")}
+                disabled={isExternalLoading || isWeeklyUpdateLoading}
+              >
+                <span className="block font-sans text-[14px] text-text-ink">
+                  External update
+                </span>
+                <span className="mt-1 block font-mono text-mono-caption text-text-accent">
+                  + ADD
+                </span>
+              </button>
             </div>
           </section>
-
-          {optionalOutputCards.map((card) => {
-            const cardState = optionalOutputCache[card.key];
-            const value =
-              cardState.activeMode === "delivery" && cardState.deliveryOutput
-                ? cardState.deliveryOutput
-                : cardState.defaultOutput;
-            const isCardLoading =
-              card.key === "actionList"
-                ? isActionListLoading
-                : card.key === "internalUpdate"
-                  ? isInternalLoading
-                  : isExternalLoading;
-            const copyState = copyLabels[card.key] ?? "Copy";
-
-            if (!isCardLoading && !value) {
-              return null;
-            }
-
-            return (
-              <section key={card.key} className={`${cardClasses} grid gap-4`}>
-                <div className={outputHeaderClasses}>
-                  <div>
-                    <h2 className="m-0 text-2xl font-semibold">{card.cardTitle}</h2>
-                  </div>
-                  <button
-                    type="button"
-                    className={copyBtn}
-                    onClick={() => handleCopy(card.key, value)}
-                    disabled={!value}
-                  >
-                    {copyState}
-                    <span aria-live="polite" className="sr-only">
-                      {copyState === "Copied" ? "Copied to clipboard" : ""}
-                    </span>
-                  </button>
-                </div>
-
-                <div className={`${outputPanelBase}${!value ? " grid place-items-center" : ""}`}>
-                  {isCardLoading ? (
-                    <p className="m-0 text-muted text-base font-sans animate-pulse-opacity">
-                      {card.key === "actionList"
-                        ? "Generating Action List..."
-                        : card.key === "internalUpdate"
-                          ? "Generating Internal Update..."
-                          : "Generating External Update..."}
-                    </p>
-                  ) : value ? (
-                    <pre className="m-0 whitespace-pre-wrap break-words text-base font-sans leading-base">
-                      {value}
-                    </pre>
-                  ) : (
-                    <p className="m-0 text-muted text-base font-sans">
-                      {card.key === "actionList"
-                        ? "Actions with owners and priorities will appear here."
-                        : card.key === "internalUpdate"
-                          ? "Your internal team update will appear here."
-                          : "Your stakeholder-facing update will appear here."}
-                    </p>
-                  )}
-                </div>
-
-                {value && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      className={cardState.activeMode === "default" ? activeToggleBtn : copyBtn}
-                      aria-pressed={cardState.activeMode === "default"}
-                      onClick={() => handleSetOptionalOutputMode(card.key, "default")}
-                    >
-                      Default
-                    </button>
-                    <button
-                      type="button"
-                      className={cardState.activeMode === "delivery" ? activeToggleBtn : copyBtn}
-                      aria-pressed={cardState.activeMode === "delivery"}
-                      onClick={() => handleSetOptionalOutputMode(card.key, "delivery")}
-                      disabled={
-                        cardState.deliveryOutputLoading && cardState.pendingMode === "delivery"
-                      }
-                    >
-                      Delivery only
-                    </button>
-                    {cardState.deliveryOutputLoading && cardState.pendingMode === "delivery" && (
-                      <span className="text-muted text-[0.8rem] font-sans">
-                        Preparing Delivery only...
-                      </span>
-                    )}
-                    {cardState.showDeliveryError && (
-                      <span className="text-error text-[0.8rem] font-sans">
-                        Delivery only is unavailable right now.
-                      </span>
-                    )}
-                  </div>
-                )}
-              </section>
-            );
-          })}
         </section>
       </div>
     </main>

@@ -1,116 +1,203 @@
 import Link from "next/link";
 
-const valueItems = [
-  "Weekly update, ready to send",
-  "Action list with owners and priorities",
-  "Internal team update",
-  "External stakeholder update"
+const heroActions = [
+  {
+    number: "1",
+    owner: "Sarah",
+    task: "Issue cutover comms to distribution list",
+    due: "Sat 09:00"
+  },
+  {
+    number: "2",
+    owner: "Tom",
+    task: "Confirm rollback owner is on-call through Sunday",
+    due: "Fri EOD"
+  },
+  {
+    number: "3",
+    owner: "Priya",
+    task: "Close out reporting defect ticket as deferred",
+    due: "Mon"
+  },
+  {
+    number: "4",
+    owner: "James",
+    task: "Schedule post go-live hypercare standup",
+    due: "Mon AM"
+  }
+] as const;
+
+const kickerColumns = [
+  {
+    kicker: "What you paste",
+    title: "Anything from the meeting.",
+    body: "Rough bullets, Copilot or Zoom summaries, Teams notes, your own scribbles. We don't mind the mess."
+  },
+  {
+    kicker: "What you get",
+    title: "Four documents, one input.",
+    body: "Weekly update, action list, internal version, external version. All from the same notes."
+  },
+  {
+    kicker: "Who it's for",
+    title: "PMs who know what good looks like.",
+    body: "Built for delivery PMs, programme managers, consultants. Not a summary. The update — written the way you'd write it."
+  }
 ] as const;
 
 export default function LandingPage() {
   return (
-    <main className="w-[min(960px,calc(100%_-_2rem))] mobile:w-[min(calc(100%_-_1rem),960px)] mx-auto pt-16 pb-20 mobile:pt-5 mobile:pb-8 grid gap-5">
-      <section className="hero mb-0">
-        <span className="inline-block mb-4 p-0 rounded-none bg-transparent border-0 text-accent text-[0.75rem] font-semibold tracking-[0.08em] uppercase font-sans">
-          For project managers
-        </span>
-        <h1 className="m-0 max-w-[12ch] mobile:max-w-none text-[clamp(2.5rem,6vw,4.5rem)] leading-tight text-text font-bold">
-          Your weekly update, written in seconds.
-        </h1>
-        <p className="mt-4 text-muted font-sans text-[1.05rem] leading-relaxed">
-          Paste your notes from this week. Get a clear, send-ready weekly update
-          instantly. Then add what you need from the same notes: action list and stakeholder
-          updates.
-        </p>
+    <main className="bg-bg-paper text-text-ink">
+      <header className="border-b border-ink px-14 py-3 mobile:px-4">
+        <div className="flex items-center justify-between gap-4 mobile:flex-wrap mobile:gap-3">
+          <div className="font-serif text-[22px] italic text-text-ink">The Updateflow</div>
+          <div className="font-mono text-mono-caption uppercase tracking-[0.1em] text-text-muted mobile:order-3 mobile:w-full mobile:text-center">
+            Vol. 1 · Issue 12 · For project managers
+          </div>
+          <div className="flex items-center gap-4 mobile:gap-2">
+            <a className="font-sans text-[13px] text-text-ink-soft" href="#hero-document">
+              Examples
+            </a>
+            <Link className="font-sans text-[13px] text-text-ink-soft" href="/app">
+              Sign in
+            </Link>
+            <Link
+              className="rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] font-medium text-text-accent-ink"
+              href="/app"
+            >
+              Open →
+            </Link>
+          </div>
+        </div>
+      </header>
 
-        <div className="flex flex-wrap items-center gap-4 mt-6 mobile:grid mobile:grid-cols-1">
+      <section className="px-14 pt-12 text-center mobile:px-4">
+        <p className="font-mono text-mono-caption uppercase tracking-[0.16em] text-text-muted">
+          ─── Friday afternoon, every week ───
+        </p>
+        <h1 className="mx-auto mt-6 max-w-[1100px] font-serif text-hero-brief font-normal leading-[0.92] tracking-[-0.02em] text-text-ink">
+          <span className="block">The weekly update,</span>
+          <span className="block italic">finally written.</span>
+        </h1>
+        <p className="mx-auto mt-6 max-w-[640px] font-sans text-[18px] leading-[1.55] text-text-ink-soft">
+          Paste this week&apos;s notes. Get a send-ready update — plus action list,
+          internal version, and external version — in about twenty seconds.
+        </p>
+        <div className="mt-8 flex justify-center gap-3 mobile:flex-col">
           <Link
-            className="inline-flex items-center justify-center py-3 px-6 bg-gradient-to-b from-[#0f8080] to-[#0a5f63] text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors transition-shadow duration-200 no-underline shadow-[0_2px_6px_rgba(13,115,119,0.35)] hover:bg-accent-hover hover:shadow-[0_4px_12px_rgba(13,115,119,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
+            className="rounded bg-bg-accent px-[22px] py-[16px] font-sans text-[15px] font-medium text-text-accent-ink mobile:w-full"
             href="/app"
           >
-            Write my weekly update
+            Write this week&apos;s update →
           </Link>
           <a
-            className="text-accent font-sans font-semibold text-[0.9rem] no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2"
-            href="#example-outputs"
+            className="rounded border border-border-line bg-transparent px-[22px] py-[14px] font-sans text-[14px] text-text-ink-soft mobile:w-full"
+            href="#hero-document"
           >
-            See a sample output
+            See an example
           </a>
         </div>
-
-        <p className="mt-4 text-muted font-sans text-[0.88rem] leading-base">
-          Works with rough notes, Copilot summaries, Zoom transcripts, or anything
-          from the meeting.
-        </p>
-
-        <p className="mt-5 text-muted font-sans text-[0.88rem] leading-relaxed">
-          Built for PMs who already know what good looks like, but have better things
-          to do than draft it.
-        </p>
       </section>
 
       <section
-        className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200"
-        id="example-outputs"
+        className="mx-auto mt-16 max-w-[1100px] rounded-sm border border-ink bg-bg-surface mobile:mx-4"
+        id="hero-document"
       >
-        <h2 className="m-0 text-2xl font-semibold">
-          One set of notes. Everything you need to communicate this week.
-        </h2>
-        <div className="grid grid-cols-2 mobile:grid-cols-1 gap-4">
-          {valueItems.map((item) => (
-            <div
-              key={item}
-              className="bg-card border border-border border-l-[3px] border-l-accent rounded-r-input rounded-l-none py-4 px-5 font-sans font-semibold text-base"
-            >
-              {item}
+        <div className="flex items-center justify-between border-b border-border-line bg-bg-paper px-7 py-3 mobile:flex-col mobile:items-start mobile:gap-1 mobile:px-5">
+          <span className="font-mono text-mono-caption uppercase tracking-[0.1em] text-text-muted">
+            This week&apos;s edition · 28 Apr – 02 May
+          </span>
+          <span className="font-mono text-mono-caption text-text-muted">
+            generated in 0:21
+          </span>
+        </div>
+        <div className="grid grid-cols-[1.1fr_1fr] gap-8 p-8 mobile:grid-cols-1 mobile:gap-6 mobile:p-5">
+          <div>
+            <p className="mb-4 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
+              Weekly update
+            </p>
+            <p className="font-serif text-body-serif leading-[1.55] text-text-ink">
+              Cutover preparation completed this week ahead of the planned Saturday
+              window. Vendor environment sign-off, which had slipped earlier in the
+              week, was secured on Wednesday and UAT entry criteria were agreed with QA,
+              with one low-severity reporting defect deferred to post go-live. UAT
+              commenced Thursday with the first round of test cases passing; cutover
+              communications are drafted and ready to issue.
+            </p>
+          </div>
+          <div className="border-l border-border-line pl-8 mobile:border-l-0 mobile:border-t mobile:border-border-line mobile:pl-0 mobile:pt-6">
+            <p className="mb-4 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
+              Action list
+            </p>
+            <div className="grid gap-0">
+              {heroActions.map((action) => (
+                <div
+                  key={action.number}
+                  className="grid grid-cols-[20px_1fr_auto] items-start gap-3 border-b border-border-line-soft py-[10px] mobile:grid-cols-[18px_1fr_auto]"
+                >
+                  <span className="font-mono text-[12px] text-text-muted">
+                    {action.number}
+                  </span>
+                  <p className="font-sans text-[14px] text-text-ink-soft mobile:text-[13px]">
+                    <span className="font-semibold text-text-ink">{action.owner}</span>
+                    {" · "}
+                    {action.task}
+                  </p>
+                  <span className="text-right font-mono text-mono-caption text-text-muted">
+                    {action.due}
+                  </span>
+                </div>
+              ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-16 border-t border-border-line px-14 py-16 mobile:px-4 mobile:py-7">
+        <div className="grid grid-cols-3 gap-10 mobile:flex mobile:flex-col">
+          {kickerColumns.map((column, index) => (
+            <article
+              key={column.kicker}
+              className="mobile:border-b mobile:border-border-line-soft mobile:py-[22px]"
+            >
+              <p className="font-mono text-mono-caption uppercase tracking-[0.08em] text-text-accent">
+                {column.kicker}
+              </p>
+              <h3 className="my-[10px] font-serif text-kicker-h3 font-normal leading-[1.1] tracking-[-0.01em] text-text-ink">
+                {column.title}
+              </h3>
+              <p className="font-sans text-[15px] leading-[1.6] text-text-ink-soft">
+                {column.body}
+              </p>
+            </article>
           ))}
         </div>
       </section>
 
-      <section className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200">
-        <h2 className="m-0 text-2xl font-semibold">Not a summary. A structured update, written the way a PM would write it.</h2>
-        <p className="m-0 text-muted font-sans text-base leading-relaxed">
-          Rough notes go in. A clear, professional weekly update comes out —
-          formatted the way a delivery-focused PM would write it. Add stakeholder
-          updates and actions on demand from the same input.
-        </p>
-      </section>
-
-      <section className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card grid gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200">
-        <h2 className="m-0 text-2xl font-semibold">See the difference</h2>
-        <div className="grid grid-cols-2 mobile:grid-cols-1 gap-4">
-          <div className="grid gap-3 p-4 border border-border rounded-card bg-card">
-            <span className="text-[0.7rem] font-bold tracking-[0.1em] uppercase text-muted font-sans">
-              Input
-            </span>
-            <p className="m-0 text-text font-sans text-base leading-relaxed">
-              API integration delayed due to vendor dependency. QA team stretched. UAT planned for next week.
-            </p>
-          </div>
-          <div className="grid gap-3 p-4 border border-border rounded-card bg-card">
-            <span className="text-[0.7rem] font-bold tracking-[0.1em] uppercase text-accent font-sans">
-              Output
-            </span>
-            <p className="m-0 text-text font-sans text-base leading-relaxed">
-              API integration remains delayed due to a vendor dependency, placing the
-              planned UAT start date at risk. Priority this week is securing confirmed
-              delivery from the vendor and validating UAT environment readiness before
-              the scheduled test window.
-            </p>
-          </div>
+      <section className="border-t border-ink px-14 py-[100px] mobile:px-4 mobile:py-12">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <h2 className="font-serif text-display-72 font-normal leading-[1] text-text-ink mobile:text-display-44">
+            Your turn.
+          </h2>
+          <p className="mx-auto max-w-[480px] font-sans text-[18px] leading-[1.55] text-text-ink-soft">
+            Paste this week&apos;s notes. Get a clean weekly update and the supporting
+            documents that usually take the rest of the afternoon.
+          </p>
+          <Link
+            className="rounded bg-bg-accent px-[22px] py-[16px] font-sans text-[15px] font-medium text-text-accent-ink mobile:w-full"
+            href="/app"
+          >
+            Write this week&apos;s update →
+          </Link>
         </div>
       </section>
 
-      <section className="bg-card border border-border border-t-2 border-t-[#0d7377]/20 rounded-card p-6 mobile:p-4 mobile:rounded-card flex flex-col items-center text-center gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] transition-shadow duration-200">
-        <h2 className="m-0 text-2xl font-semibold">Paste your notes. Your weekly update, ready in seconds.</h2>
-        <Link
-          className="inline-flex items-center justify-center py-3 px-6 bg-gradient-to-b from-[#0f8080] to-[#0a5f63] text-white text-[0.9rem] font-medium tracking-[0.01em] border-0 rounded-input font-sans cursor-pointer transition-colors transition-shadow duration-200 no-underline shadow-[0_2px_6px_rgba(13,115,119,0.35)] hover:bg-accent-hover hover:shadow-[0_4px_12px_rgba(13,115,119,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7377] focus-visible:ring-offset-2 w-auto min-w-64"
-          href="/app"
-        >
-          Open Updateflow
-        </Link>
-      </section>
+      <footer className="border-t border-border-line px-14 py-8 mobile:px-4 mobile:py-6">
+        <div className="flex items-center justify-between gap-4 font-sans text-[12px] text-text-muted mobile:flex-col mobile:items-start">
+          <span>© 2026 Updateflow.ai · Built for project managers</span>
+          <span>Privacy · Terms · Status: ◯ all systems normal</span>
+        </div>
+      </footer>
     </main>
   );
 }

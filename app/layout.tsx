@@ -1,8 +1,29 @@
 import type { Metadata } from "next";
-import "./globals.css";
-import { PostHogProvider } from "./providers";
-import { PostHogPageView } from "./posthog-pageview";
 import { Suspense } from "react";
+import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
+
+import "./globals.css";
+import { PostHogPageView } from "./posthog-pageview";
+import { PostHogProvider } from "./providers";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans"
+});
+
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-serif"
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono"
+});
 
 export const metadata: Metadata = {
   title: "Updateflow",
@@ -16,7 +37,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-bg text-text font-serif">
+      <body
+        className={`${inter.variable} ${newsreader.variable} ${jetbrainsMono.variable} min-h-screen bg-bg-paper font-sans text-text-ink antialiased`}
+      >
         <PostHogProvider>
           <Suspense fallback={null}>
             <PostHogPageView />
