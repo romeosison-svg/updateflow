@@ -87,6 +87,32 @@ describe("tool page split editor redesign wiring", () => {
     expect(pageSource).toContain("Actions");
   });
 
+  it("uses one shared structured action-list parser and renderer for the active action output", () => {
+    expect(pageSource).toContain("function parseActionListOutput(output: string): ParsedActionRow[] | null");
+    expect(pageSource).toContain(
+      "const actionListOutput = getOptionalOutputValue(optionalOutputCache.actionList);"
+    );
+    expect(pageSource).toContain(
+      "const parsedActionRows = useMemo(() => parseActionListOutput(actionListOutput), [actionListOutput]);"
+    );
+    expect(pageSource).toContain('className="grid grid-cols-[20px_1fr_auto] items-start gap-3 border-b border-border-line-soft py-[10px] mobile:block"');
+    expect(pageSource).toContain('{" · "}');
+  });
+
+  it("adds a discoverability label above the sample chips without changing chip wiring", () => {
+    expect(pageSource).toContain("Try an example");
+    expect(pageSource).toContain('className="mb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted"');
+    expect(pageSource).toContain("handleSampleClick(sample.transcript)");
+  });
+
+  it("keeps the generate button outside the textarea scroll area in the left pane", () => {
+    expect(pageSource).toContain('className="flex min-h-0 flex-col overflow-hidden border-r border-border-line bg-bg-paper mobile:border-r-0"');
+    expect(pageSource).toContain('className="flex min-h-0 flex-1 flex-col overflow-hidden"');
+    expect(pageSource).toContain('className="min-h-[240px] flex-1 resize-none overflow-y-auto whitespace-pre-wrap rounded border border-border-line bg-bg-surface p-[18px] font-mono text-mono-input leading-[1.65] text-text-ink-soft mobile:max-h-[180px] mobile:text-mono-caption"');
+    expect(pageSource).toContain('className="border-t border-border-line px-7 py-4 mobile:px-4"');
+    expect(pageSource).toContain("onSubmit={handleSubmit}");
+  });
+
   it("adds the mobile single-column split layout and horizontally scrollable tab strip", () => {
     expect(pageSource).toContain("mobile:flex mobile:flex-col");
     expect(pageSource).toContain("overflow-x-auto");

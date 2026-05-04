@@ -738,7 +738,7 @@ export default function ToolPage() {
       </header>
 
       <div className="grid min-h-[920px] grid-cols-[1fr_1.1fr] border-t border-border-line mobile:flex mobile:flex-col">
-        <section className="border-r border-border-line bg-bg-paper mobile:border-r-0">
+        <section className="flex min-h-0 flex-col overflow-hidden border-r border-border-line bg-bg-paper mobile:border-r-0">
           <div className="flex items-center justify-between px-7 pb-4 pt-5 mobile:px-4">
             <span className="font-mono text-mono-caption uppercase tracking-[0.1em] text-text-muted">
               ① Paste notes
@@ -748,55 +748,66 @@ export default function ToolPage() {
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-2 px-7 pb-4 mobile:px-4">
-            {sampleTranscripts.map((sample) => {
-              const isActive = transcript === sample.transcript;
+          <div className="px-7 pb-4 mobile:px-4">
+            <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
+              Try an example
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {sampleTranscripts.map((sample) => {
+                const isActive = transcript === sample.transcript;
 
-              return (
-                <button
-                  key={sample.id}
-                  type="button"
-                  className={`rounded-full px-[10px] py-[5px] font-mono text-mono-caption ${
-                    isActive
-                      ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                      : "border border-border-line bg-bg-surface text-text-ink-soft"
-                  }`}
-                  onClick={() => handleSampleClick(sample.transcript)}
-                >
-                  {sample.label}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={sample.id}
+                    type="button"
+                    className={`rounded-full px-[10px] py-[5px] font-mono text-mono-caption ${
+                      isActive
+                        ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                        : "border border-border-line bg-bg-surface text-text-ink-soft"
+                    }`}
+                    onClick={() => handleSampleClick(sample.transcript)}
+                  >
+                    {sample.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="flex h-full flex-col px-7 pb-7 mobile:px-4 mobile:pb-5">
-            <form className="flex h-full flex-col" onSubmit={handleSubmit}>
-              <textarea
-                className="min-h-[240px] flex-1 resize-none whitespace-pre-wrap rounded border border-border-line bg-bg-surface p-[18px] font-mono text-mono-input leading-[1.65] text-text-ink-soft mobile:max-h-[180px] mobile:text-mono-caption"
-                value={transcript}
-                onChange={(event) => setTranscript(event.target.value)}
-                placeholder="Paste your notes from this week: rough bullets, Copilot or Zoom summaries, Teams notes, or anything from the meeting."
-              />
-              <div className="mt-4 flex items-center gap-3 mobile:flex-col mobile:items-stretch">
-                <button
-                  className="rounded bg-bg-accent px-4 py-[10px] font-sans text-[14px] font-medium text-text-accent-ink disabled:cursor-not-allowed disabled:opacity-60 mobile:w-full"
-                  type="submit"
-                  disabled={isWeeklyUpdateLoading}
-                >
-                  {isWeeklyUpdateLoading
-                    ? "Generating weekly update..."
-                    : "Generate weekly update →"}
-                </button>
-                <span className="font-mono text-mono-caption text-text-muted mobile:hidden">
-                  ⌘↵ to run
-                </span>
-                <span className="ml-auto font-sans text-[12px] text-text-muted mobile:hidden">
-                  Names anonymised on output
-                </span>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <form className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={handleSubmit}>
+              <div className="flex min-h-0 flex-1 flex-col px-7 mobile:px-4">
+                {/* TODO: The original spec was written for a different branch shape; this keeps the
+                    current split-editor layout and only changes the scrolling boundary. */}
+                <textarea
+                  className="min-h-[240px] flex-1 resize-none overflow-y-auto whitespace-pre-wrap rounded border border-border-line bg-bg-surface p-[18px] font-mono text-mono-input leading-[1.65] text-text-ink-soft mobile:max-h-[180px] mobile:text-mono-caption"
+                  value={transcript}
+                  onChange={(event) => setTranscript(event.target.value)}
+                  placeholder="Paste your notes from this week: rough bullets, Copilot or Zoom summaries, Teams notes, or anything from the meeting."
+                />
+                {error && (
+                  <p className="mt-2 font-sans text-[13px] text-error">{error}</p>
+                )}
               </div>
-              {error && (
-                <p className="mt-2 font-sans text-[13px] text-error">{error}</p>
-              )}
+              <div className="border-t border-border-line px-7 py-4 mobile:px-4">
+                <div className="flex items-center gap-3 mobile:flex-col mobile:items-stretch">
+                  <button
+                    className="rounded bg-bg-accent px-4 py-[10px] font-sans text-[14px] font-medium text-text-accent-ink disabled:cursor-not-allowed disabled:opacity-60 mobile:w-full"
+                    type="submit"
+                    disabled={isWeeklyUpdateLoading}
+                  >
+                    {isWeeklyUpdateLoading
+                      ? "Generating weekly update..."
+                      : "Generate weekly update →"}
+                  </button>
+                  <span className="font-mono text-mono-caption text-text-muted mobile:hidden">
+                    ⌘↵ to run
+                  </span>
+                  <span className="ml-auto font-sans text-[12px] text-text-muted mobile:hidden">
+                    Names anonymised on output
+                  </span>
+                </div>
+              </div>
             </form>
           </div>
         </section>
@@ -933,33 +944,43 @@ export default function ToolPage() {
                         {parsedActionRows.map((row) => (
                           <div
                             key={`${row.number}-${row.action}`}
-                            className="grid grid-cols-[20px_80px_1fr_90px_70px] items-center gap-[14px] border-b border-border-line-soft py-3 mobile:block"
+                            className="grid grid-cols-[20px_1fr_auto] items-start gap-3 border-b border-border-line-soft py-[10px] mobile:block"
                           >
                             <div className="font-mono text-[12px] text-text-muted mobile:hidden">
                               {row.number}
                             </div>
-                            <div className="font-sans text-[14px] font-semibold text-text-ink mobile:mb-1 mobile:flex mobile:items-center mobile:justify-between">
-                              <span>{row.owner}</span>
-                              <span className="hidden mobile:flex mobile:items-center mobile:gap-2">
-                                <span className="font-mono text-[12px] font-normal text-text-muted">
-                                  {row.due}
+                            <div>
+                              <div className="hidden items-center justify-between mobile:mb-1 mobile:flex">
+                                <span className="font-sans text-[14px] font-semibold text-text-ink">
+                                  {row.owner}
                                 </span>
-                                <span
-                                  className={`rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
-                                >
-                                  {row.priority}
+                                <span className="flex items-center gap-2">
+                                  <span className="font-mono text-[12px] font-normal text-text-muted">
+                                    {row.due}
+                                  </span>
+                                  <span
+                                    className={`rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
+                                  >
+                                    {row.priority}
+                                  </span>
                                 </span>
+                              </div>
+                              <p className="font-sans text-[14px] text-text-ink-soft mobile:pl-6 mobile:text-[13px]">
+                                <span className="font-semibold text-text-ink mobile:hidden">
+                                  {row.owner}
+                                </span>
+                                <span className="mobile:hidden">{" · "}</span>
+                                {row.action}
+                              </p>
+                            </div>
+                            <div className="text-right mobile:hidden">
+                              <span className="block font-mono text-[11px] text-text-muted">
+                                {row.due}
                               </span>
-                            </div>
-                            <div className="font-sans text-[14px] text-text-ink-soft mobile:pl-6 mobile:text-[13px]">
-                              {row.action}
-                            </div>
-                            <div className="font-mono text-[12px] text-text-muted mobile:hidden">
-                              {row.due}
-                            </div>
-                            <div className="mobile:hidden">
+                              {/* TODO: The landing-page reference does not define a desktop priority treatment.
+                                  Preserve the existing app priority pill until product specifies otherwise. */}
                               <span
-                                className={`rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
+                                className={`mt-1 inline-flex rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
                               >
                                 {row.priority}
                               </span>
