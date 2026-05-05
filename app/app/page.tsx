@@ -80,6 +80,12 @@ type ParsedActionRow = {
   priority: string;
 };
 
+function formatGenerationTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
 function createEmptyOptionalOutputCacheState(): OptionalOutputCacheState {
   return {
     activeMode: "default",
@@ -190,6 +196,7 @@ export default function ToolPage() {
   const [isExternalLoading, setIsExternalLoading] = useState(false);
   const [isInternalLoading, setIsInternalLoading] = useState(false);
   const [isWeeklyUpdateLoading, setIsWeeklyUpdateLoading] = useState(false);
+  const [lastGenerationTime, setLastGenerationTime] = useState<number | null>(null);
   const [copyLabels, setCopyLabels] = useState<Partial<Record<OutputCardKey, string>>>({});
   // Spec note: the prompt layer remains delivery-biased in Default mode, so this cache
   // represents "raw model output under current prompts" vs "classifier-filtered output".
@@ -261,6 +268,7 @@ export default function ToolPage() {
 
     setError("");
     setIsWeeklyUpdateLoading(true);
+    const startTime = Date.now();
 
     if (options?.isResetToDefault) {
       setDisplayedWeeklyUpdate("");
@@ -302,6 +310,15 @@ export default function ToolPage() {
         setDisplayedWeeklyUpdate(nextWeeklyUpdate);
       }
 
+      // Spec note: generateWeeklyUpdate is reused by adjustment/reset flows, but the
+      // timer should only reflect successful full generations from the transcript.
+      if (!options?.adjustmentDirection && !options?.isResetToDefault) {
+        const elapsedSeconds = Math.round(
+          (Date.now() - startTime) / 1000
+        );
+        setLastGenerationTime(elapsedSeconds);
+      }
+
       setCopyLabels((current) => ({
         ...(options?.resetSupplementaryOutputs ? {} : current),
         shortStatus: "Copy"
@@ -331,6 +348,7 @@ export default function ToolPage() {
     event.preventDefault();
     setActiveTab("weekly");
     setWeeklyLengthMode("default");
+    setLastGenerationTime(null);
 
     await generateWeeklyUpdate({
       captureGenerateEvent: true,
@@ -719,8 +737,10 @@ export default function ToolPage() {
       <header className="border-b border-border-line bg-bg-surface px-7 py-4 mobile:px-4 mobile:py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center text-[14px] mobile:text-[15px]">
-            <span className="font-sans font-bold text-text-ink">Updateflow</span>
-            <span className="text-text-muted">.ai</span>
+            <Link href="/" className="flex items-center">
+              <span className="font-sans font-bold text-text-ink">Updateflow</span>
+              <span className="text-text-muted">.ai</span>
+            </Link>
             <span className="ml-3 rounded-full border border-border-line px-2 py-[3px] font-mono text-mono-caption text-text-muted">
               w/c 28 apr
             </span>
@@ -737,8 +757,8 @@ export default function ToolPage() {
         </div>
       </header>
 
-      <div className="grid min-h-[920px] grid-cols-[1fr_1.1fr] border-t border-border-line mobile:flex mobile:flex-col">
-        <section className="flex min-h-0 flex-col overflow-hidden border-r border-border-line bg-bg-paper mobile:border-r-0">
+      <div className="grid h-[calc(100vh-57px)] grid-cols-[1fr_1.1fr] border-t border-border-line mobile:h-auto mobile:flex mobile:flex-col">
+        <section className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border-line bg-bg-paper mobile:border-r-0">
           <div className="flex items-center justify-between px-7 pb-4 pt-5 mobile:px-4">
             <span className="font-mono text-mono-caption uppercase tracking-[0.1em] text-text-muted">
               ① Paste notes
@@ -812,14 +832,16 @@ export default function ToolPage() {
           </div>
         </section>
 
-        <section className="bg-bg-surface">
+        <section className="h-full overflow-y-auto bg-bg-surface">
           <div className="flex items-center justify-between px-7 pb-0 pt-5 mobile:px-4">
             <span className="font-mono text-mono-caption uppercase tracking-[0.1em] text-text-muted">
               ② This week&apos;s documents
             </span>
-            {showGeneratedIndicator && (
+            {showGeneratedIndicator &&
+              !isWeeklyUpdateLoading &&
+              lastGenerationTime !== null && (
               <span className="font-mono text-mono-caption text-text-accent">
-                ● generated 0:21
+                ● generated {formatGenerationTime(lastGenerationTime)}
               </span>
             )}
           </div>
