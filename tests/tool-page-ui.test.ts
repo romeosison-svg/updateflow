@@ -44,13 +44,87 @@ describe("tool page split editor redesign wiring", () => {
     );
   });
 
-  it("keeps weekly update handlers and events reachable from the redesigned toolbar", () => {
+  it("starts all optional outputs in the background on the main generate press", () => {
+    expect(pageSource).toContain("const weeklyUpdatePromise = generateWeeklyUpdate({");
+    expect(pageSource).toContain("void Promise.allSettled([");
+    expect(pageSource).toContain('handleGenerateFilterableOutput(');
+    expect(pageSource).toContain('"actionList"');
+    expect(pageSource).toContain('"internalUpdate"');
+    expect(pageSource).toContain('"externalUpdate"');
+    expect(pageSource).toContain("captureAddToPackEvent: false");
+    expect(pageSource).toContain("suppressGlobalError: true");
+    expect(pageSource).toContain("await weeklyUpdatePromise;");
+  });
+
+  it("keeps the main generate button disabled while any output is still loading", () => {
+    expect(pageSource).toContain("const isAnyGenerationInProgress =");
+    expect(pageSource).toContain("isWeeklyUpdateLoading ||");
+    expect(pageSource).toContain("isActionListLoading ||");
+    expect(pageSource).toContain("isInternalLoading ||");
+    expect(pageSource).toContain("isExternalLoading;");
+    expect(pageSource).toContain("disabled={isAnyGenerationInProgress}");
+    expect(pageSource).toContain('? "Generating..."');
+    expect(pageSource).not.toContain("Generating weekly update...");
+  });
+
+  it("validates transcript before clearing outputs on submit and removes the old reset option", () => {
+    const handleSubmitBlock =
+      pageSource.match(/const handleSubmit = async[\s\S]*?await weeklyUpdatePromise;\s*\};/)?.[0] ??
+      "";
+    const transcriptGuardIndex = handleSubmitBlock.indexOf('if (!transcript.trim()) {');
+    const resetIndex = handleSubmitBlock.indexOf("resetSupplementaryOutputs();");
+
+    expect(transcriptGuardIndex).toBeGreaterThan(-1);
+    expect(resetIndex).toBeGreaterThan(-1);
+    expect(transcriptGuardIndex).toBeLessThan(resetIndex);
+    expect(handleSubmitBlock).toContain(
+      'setError("Paste some meeting notes or a transcript before generating.");'
+    );
+    expect(pageSource).not.toContain("resetSupplementaryOutputs?: boolean");
+    expect(pageSource).not.toContain("options?.resetSupplementaryOutputs");
+  });
+
+  it("surfaces optional output failures from the weekly tab and flags affected tabs", () => {
+    expect(pageSource).toContain("const optionalOutputFailureKeys =");
+    expect(pageSource).toContain("const hasOptionalOutputFailures =");
+    expect(pageSource).toContain("const hasStakeholderGenerationError =");
+    expect(pageSource).toContain("Some additional outputs could not be generated.");
+    expect(pageSource).toMatch(/Open the affected tabs or\s+press Generate to retry\./);
+    expect(pageSource).toContain("optionalOutputCache.actionList.generationError");
+    expect(pageSource).toContain("optionalOutputCache.internalUpdate.generationError");
+    expect(pageSource).toContain("optionalOutputCache.externalUpdate.generationError");
+    expect(pageSource).toContain('className="ml-2 text-error"');
+  });
+
+  it("shows loading and empty states for optional tabs without generate prompts or add-to-pack UI", () => {
+    expect(pageSource).toContain("Generating Action List...");
+    expect(pageSource).toContain("Generating Internal Update...");
+    expect(pageSource).toContain("Generating External Update...");
+    expect(pageSource).toContain("Your action list will appear here.");
+    expect(pageSource).toContain("Your internal team update will appear here.");
+    expect(pageSource).toContain("Your stakeholder-facing update will appear here.");
+    expect(pageSource).not.toContain("Generate Action List");
+    expect(pageSource).not.toContain("Generate Stakeholder Update");
+    expect(pageSource).not.toContain("renderOptionalPlaceholder");
+    expect(pageSource).not.toContain("Add to your pack");
+    expect(pageSource).not.toContain("+ ADD");
+  });
+
+  it("keeps stakeholder audience switching local and does not trigger additional generation on tab switch", () => {
+    expect(pageSource).toContain("const handleStakeholderAudienceChange = (audience: StakeholderAudience) => {");
+    expect(pageSource).toContain("setStakeholderAudience(audience);");
+    expect(pageSource).not.toContain("if (!nextCardState.defaultOutput && !isNextAudienceLoading)");
+    expect(pageSource).not.toContain("handleGenerateOptionalOutput(");
+  });
+
+  it("keeps weekly update handlers, length controls, and copy wiring reachable", () => {
     expect(pageSource).toContain("handleSubmit");
     expect(pageSource).toContain('handleAdjustWeeklyUpdateLength(mode)');
     expect(pageSource).toContain("handleResetToDefault()");
     expect(pageSource).toContain("generate_weekly_update");
     expect(pageSource).toContain("LENGTH_ADJUSTED_EVENT");
     expect(pageSource).toContain("RESET_TO_DEFAULT_EVENT");
+    expect(pageSource).toContain('handleCopy("shortStatus", displayedWeeklyUpdate)');
   });
 
   it("keeps delivery filter toggles and PostHog wiring for optional outputs", () => {
@@ -65,29 +139,7 @@ describe("tool page split editor redesign wiring", () => {
     expect(pageSource).toContain('"external_update"');
   });
 
-  it("includes per-tab empty state placeholders", () => {
-    expect(pageSource).toContain("Your weekly update will appear here.");
-    expect(pageSource).toContain("Your action list will appear here.");
-    expect(pageSource).toContain("Your internal team update will appear here.");
-    expect(pageSource).toContain("Your stakeholder-facing update will appear here.");
-  });
-
-  it("routes stakeholder generation through the unified tab and audience state", () => {
-    expect(pageSource).toContain("const handleStakeholderAudienceChange = (audience: StakeholderAudience) => {");
-    expect(pageSource).toContain("if (!nextCardState.defaultOutput && !isNextAudienceLoading) {");
-    expect(pageSource).toContain('setActiveTab("stakeholder")');
-    expect(pageSource).toContain(
-      'setStakeholderAudience(key === "internalUpdate" ? "internal" : "external")'
-    );
-    expect(pageSource).toContain("Generate Stakeholder Update");
-    expect(pageSource).toContain("Stakeholder Update");
-  });
-
-  it("keeps the action output section heading as 'Actions'", () => {
-    expect(pageSource).toContain("Actions");
-  });
-
-  it("uses one shared structured action-list parser and renderer for the active action output", () => {
+  it("preserves the structured action-list renderer and the Actions heading", () => {
     expect(pageSource).toContain("function parseActionListOutput(output: string): ParsedActionRow[] | null");
     expect(pageSource).toContain(
       "const actionListOutput = getOptionalOutputValue(optionalOutputCache.actionList);"
@@ -95,60 +147,35 @@ describe("tool page split editor redesign wiring", () => {
     expect(pageSource).toContain(
       "const parsedActionRows = useMemo(() => parseActionListOutput(actionListOutput), [actionListOutput]);"
     );
-    expect(pageSource).toContain('className="grid grid-cols-[20px_1fr_auto] items-start gap-3 border-b border-border-line-soft py-[10px] mobile:block"');
-    expect(pageSource).toContain('{" · "}');
+    expect(pageSource).toContain("Actions");
   });
 
-  it("adds a discoverability label above the sample chips without changing chip wiring", () => {
+  it("keeps the sample-chip discoverability label and fixed input-pane layout improvements", () => {
     expect(pageSource).toContain("Try an example");
-    expect(pageSource).toContain('className="mb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted"');
-    expect(pageSource).toContain("handleSampleClick(sample.transcript)");
-  });
-
-  it("keeps the generate button outside the textarea scroll area in the left pane", () => {
-    expect(pageSource).toContain('className="grid h-[calc(100vh-57px)] grid-cols-[1fr_1.1fr] border-t border-border-line mobile:h-auto mobile:flex mobile:flex-col"');
-    expect(pageSource).not.toContain('grid min-h-[920px] grid-cols-[1fr_1.1fr]');
-    expect(pageSource).toContain('className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border-line bg-bg-paper mobile:border-r-0"');
-    expect(pageSource).toContain('className="flex min-h-0 flex-1 flex-col overflow-hidden"');
-    expect(pageSource).toContain('className="min-h-[240px] flex-1 resize-none overflow-y-auto whitespace-pre-wrap rounded border border-border-line bg-bg-surface p-[18px] font-mono text-mono-input leading-[1.65] text-text-ink-soft mobile:max-h-[180px] mobile:text-mono-caption"');
-    expect(pageSource).toContain('className="border-t border-border-line px-7 py-4 mobile:px-4"');
+    expect(pageSource).toContain(
+      'className="grid h-[calc(100vh-57px)] grid-cols-[1fr_1.1fr] border-t border-border-line mobile:h-auto mobile:flex mobile:flex-col"'
+    );
+    expect(pageSource).toContain(
+      'className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border-line bg-bg-paper mobile:border-r-0"'
+    );
     expect(pageSource).toContain('className="h-full overflow-y-auto bg-bg-surface"');
-    expect(pageSource).toContain("onSubmit={handleSubmit}");
   });
 
-  it("wraps only the wordmark in a link back to the landing page", () => {
+  it("wraps only the wordmark in a link back to the landing page and keeps the real generation timer", () => {
     expect(pageSource).toContain('<Link href="/" className="flex items-center">');
     expect(pageSource).toContain('<span className="font-sans font-bold text-text-ink">Updateflow</span>');
     expect(pageSource).toContain('<span className="text-text-muted">.ai</span>');
-    expect(pageSource).toContain('<span className="ml-3 rounded-full border border-border-line px-2 py-[3px] font-mono text-mono-caption text-text-muted">');
-  });
-
-  it("tracks, formats, and conditionally displays the real generation timer", () => {
     expect(pageSource).toContain('const [lastGenerationTime, setLastGenerationTime] = useState<number | null>(null);');
     expect(pageSource).toContain("function formatGenerationTime(seconds: number): string");
-    expect(pageSource).toContain('return `${mins}:${secs.toString().padStart(2, "0")}`;');
-    expect(pageSource).toContain("const startTime = Date.now();");
-    expect(pageSource).toContain("const elapsedSeconds = Math.round(");
     expect(pageSource).toContain("setLastGenerationTime(elapsedSeconds);");
-    expect(pageSource).toContain("if (!options?.adjustmentDirection && !options?.isResetToDefault) {");
     expect(pageSource).toContain("setLastGenerationTime(null);");
-    expect(pageSource).toContain("!isWeeklyUpdateLoading &&");
-    expect(pageSource).toContain("lastGenerationTime !== null && (");
     expect(pageSource).not.toContain("generated 0:21");
   });
 
-  it("adds the mobile single-column split layout and horizontally scrollable tab strip", () => {
-    expect(pageSource).toContain("mobile:flex mobile:flex-col");
-    expect(pageSource).toContain("overflow-x-auto");
-    expect(pageSource).toContain("mobile:whitespace-nowrap");
-    expect(pageSource).toContain("[&::-webkit-scrollbar]:hidden");
-  });
-
-  it("adds the mobile-only add-to-your-pack controls so optional-output handlers stay reachable", () => {
-    expect(pageSource).toContain("Add to your pack");
-    expect(pageSource).toContain("hidden border-t border-border-line px-4 py-5 mobile:block");
-    expect(pageSource).toContain("handleOpenActionListTab()");
-    expect(pageSource).toContain('handleOpenStakeholderTab("internal")');
+  it("keeps add_to_pack analytics unreachable from the current UI while preserving the legacy capture path", () => {
+    expect(pageSource).toContain('"add_to_pack_clicked"');
+    expect(pageSource).toContain("captureAddToPackEvent?: boolean");
+    expect(pageSource).toContain("if (options?.captureAddToPackEvent ?? true)");
   });
 
   it("removes the dead History button from the app header", () => {

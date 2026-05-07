@@ -60,6 +60,7 @@ type OptionalOutputCacheState = {
   deliveryOutput: string | null;
   deliveryOutputError: boolean;
   deliveryOutputLoading: boolean;
+  generationError: string | null;
   pendingMode: OptionalFilterMode | null;
   showDeliveryError: boolean;
 };
@@ -93,6 +94,7 @@ function createEmptyOptionalOutputCacheState(): OptionalOutputCacheState {
     deliveryOutput: null,
     deliveryOutputError: false,
     deliveryOutputLoading: false,
+    generationError: null,
     pendingMode: null,
     showDeliveryError: false
   };
@@ -234,6 +236,19 @@ export default function ToolPage() {
       : activeTab === "actions"
         ? Boolean(actionListOutput)
         : Boolean(stakeholderOutput);
+  const isAnyGenerationInProgress =
+    isWeeklyUpdateLoading ||
+    isActionListLoading ||
+    isInternalLoading ||
+    isExternalLoading;
+  const optionalOutputFailureKeys = (
+    ["actionList", "internalUpdate", "externalUpdate"] as const
+  ).filter((key) => optionalOutputCache[key].generationError);
+  const hasOptionalOutputFailures =
+    !isWeeklyUpdateLoading && Boolean(displayedWeeklyUpdate) && optionalOutputFailureKeys.length > 0;
+  const hasStakeholderGenerationError =
+    Boolean(optionalOutputCache.internalUpdate.generationError) ||
+    Boolean(optionalOutputCache.externalUpdate.generationError);
 
   const resetSupplementaryOutputs = () => {
     setOptionalOutputCache(createInitialOptionalOutputCache());
@@ -251,13 +266,9 @@ export default function ToolPage() {
       adjustmentDirection?: WeeklyUpdateAdjustmentDirection;
       currentOutput?: string;
       isResetToDefault?: boolean;
-      resetSupplementaryOutputs?: boolean;
     }
   ) => {
     if (!transcript.trim()) {
-      if (options?.resetSupplementaryOutputs) {
-        resetSupplementaryOutputs();
-      }
       if (options?.isResetToDefault) {
         setDefaultWeeklyUpdate("");
         setDisplayedWeeklyUpdate("");
@@ -299,10 +310,6 @@ export default function ToolPage() {
         throw new Error(data.error ?? "Something went wrong while generating the outputs.");
       }
 
-      if (options?.resetSupplementaryOutputs) {
-        resetSupplementaryOutputs();
-      }
-
       if (options?.adjustmentDirection) {
         setDisplayedWeeklyUpdate(nextWeeklyUpdate);
       } else {
@@ -320,7 +327,7 @@ export default function ToolPage() {
       }
 
       setCopyLabels((current) => ({
-        ...(options?.resetSupplementaryOutputs ? {} : current),
+        ...current,
         shortStatus: "Copy"
       }));
 
@@ -328,9 +335,6 @@ export default function ToolPage() {
         posthog?.capture("generate_weekly_update");
       }
     } catch (generationError) {
-      if (options?.resetSupplementaryOutputs) {
-        resetSupplementaryOutputs();
-      }
       if (options?.isResetToDefault) {
         setDisplayedWeeklyUpdate(defaultWeeklyUpdate);
       }
@@ -346,14 +350,63 @@ export default function ToolPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!transcript.trim()) {
+      setError("Paste some meeting notes or a transcript before generating.");
+      return;
+    }
+
     setActiveTab("weekly");
     setWeeklyLengthMode("default");
     setLastGenerationTime(null);
+    resetSupplementaryOutputs();
 
-    await generateWeeklyUpdate({
-      captureGenerateEvent: true,
-      resetSupplementaryOutputs: true
+    const weeklyUpdatePromise = generateWeeklyUpdate({
+      captureGenerateEvent: true
     });
+
+    // The main generate action now owns optional output generation, so we start
+    // all three in the background here rather than waiting for tab-specific clicks.
+    void Promise.allSettled([
+      handleGenerateFilterableOutput(
+        "actionList",
+        "the action list",
+        {
+          transcript,
+          outputType: "action-list"
+        },
+        {
+          captureAddToPackEvent: false,
+          suppressGlobalError: true
+        }
+      ),
+      handleGenerateFilterableOutput(
+        "internalUpdate",
+        "the internal update",
+        {
+          transcript,
+          includeInternal: true
+        },
+        {
+          captureAddToPackEvent: false,
+          suppressGlobalError: true
+        }
+      ),
+      handleGenerateFilterableOutput(
+        "externalUpdate",
+        "the external update",
+        {
+          transcript,
+          includeExternal: true
+        },
+        {
+          captureAddToPackEvent: false,
+          suppressGlobalError: true
+        }
+      )
+    ]);
+
+    await weeklyUpdatePromise;
   };
 
   const handleAdjustWeeklyUpdateLength = async (
@@ -453,17 +506,27 @@ export default function ToolPage() {
       includeExternal?: boolean;
       includeInternal?: boolean;
       outputType?: "action-list";
+    },
+    options?: {
+      captureAddToPackEvent?: boolean;
+      suppressGlobalError?: boolean;
     }
   ) => {
     if (!transcript.trim()) {
-      setError(`Paste some meeting notes or a transcript before generating ${errorLabel}.`);
+      if (!options?.suppressGlobalError) {
+        setError(`Paste some meeting notes or a transcript before generating ${errorLabel}.`);
+      }
       return false;
     }
 
-    setError("");
-    posthog?.capture("add_to_pack_clicked", {
-      type: getAddToPackAnalyticsType(key)
-    });
+    if (!options?.suppressGlobalError) {
+      setError("");
+    }
+    if (options?.captureAddToPackEvent ?? true) {
+      posthog?.capture("add_to_pack_clicked", {
+        type: getAddToPackAnalyticsType(key)
+      });
+    }
 
     switch (key) {
       case "actionList":
@@ -520,11 +583,20 @@ export default function ToolPage() {
       void prefetchDeliveryOnlyOutput(key, requestBody);
       return true;
     } catch (optionalError) {
-      setError(
+      const message =
         optionalError instanceof Error
           ? optionalError.message
-          : `Something went wrong while generating ${errorLabel}.`
-      );
+          : `Something went wrong while generating ${errorLabel}.`;
+      setOptionalOutputCache((current) => ({
+        ...current,
+        [key]: {
+          ...createEmptyOptionalOutputCacheState(),
+          generationError: message
+        }
+      }));
+      if (!options?.suppressGlobalError) {
+        setError(message);
+      }
       return false;
     } finally {
       switch (key) {
@@ -538,28 +610,6 @@ export default function ToolPage() {
           setIsExternalLoading(false);
           break;
       }
-    }
-  };
-
-  const handleGenerateActionList = async () => {
-    return handleGenerateFilterableOutput("actionList", "the action list", {
-      transcript,
-      outputType: "action-list"
-    });
-  };
-
-  const handleGenerateOptionalOutput = async (
-    key: StakeholderOutputKey,
-    errorLabel: string
-  ) => {
-    const didGenerate = await handleGenerateFilterableOutput(key, errorLabel, {
-      transcript,
-      ...(key === "internalUpdate" ? { includeInternal: true } : { includeExternal: true })
-    });
-
-    if (didGenerate) {
-      setActiveTab("stakeholder");
-      setStakeholderAudience(key === "internalUpdate" ? "internal" : "external");
     }
   };
 
@@ -637,33 +687,8 @@ export default function ToolPage() {
     setError("");
   };
 
-  const handleOpenActionListTab = () => {
-    setActiveTab("actions");
-    void handleGenerateActionList();
-  };
-
-  const handleOpenStakeholderTab = (audience: StakeholderAudience = "internal") => {
-    setActiveTab("stakeholder");
-    setStakeholderAudience(audience);
-    void handleGenerateOptionalOutput(
-      getStakeholderOutputKey(audience),
-      audience === "internal" ? "the internal update" : "the external update"
-    );
-  };
-
   const handleStakeholderAudienceChange = (audience: StakeholderAudience) => {
-    const nextKey = getStakeholderOutputKey(audience);
-    const nextCardState = optionalOutputCache[nextKey];
-    const isNextAudienceLoading = audience === "internal" ? isInternalLoading : isExternalLoading;
-
     setStakeholderAudience(audience);
-
-    if (!nextCardState.defaultOutput && !isNextAudienceLoading) {
-      void handleGenerateOptionalOutput(
-        nextKey,
-        audience === "internal" ? "the internal update" : "the external update"
-      );
-    }
   };
 
   const handleCopy = async (key: OutputCardKey, value: string) => {
@@ -712,25 +737,6 @@ export default function ToolPage() {
     setWeeklyLengthMode(mode);
     await handleAdjustWeeklyUpdateLength(mode);
   };
-
-  const renderOptionalPlaceholder = (
-    title: string,
-    description: string,
-    action: () => void,
-    label: string,
-    isLoading: boolean
-  ) => (
-    <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-center mobile:min-h-[220px]">
-      <p className="font-sans text-[16px] text-text-muted">{description}</p>
-      <button
-        className="rounded border border-border-line bg-bg-surface px-4 py-[10px] font-sans text-[14px] font-medium text-text-ink-soft"
-        onClick={action}
-        type="button"
-      >
-        {isLoading ? `Generating ${title}...` : label}
-      </button>
-    </div>
-  );
 
   return (
     <main className="min-h-screen bg-bg-paper text-text-ink">
@@ -814,10 +820,10 @@ export default function ToolPage() {
                   <button
                     className="rounded bg-bg-accent px-4 py-[10px] font-sans text-[14px] font-medium text-text-accent-ink disabled:cursor-not-allowed disabled:opacity-60 mobile:w-full"
                     type="submit"
-                    disabled={isWeeklyUpdateLoading}
+                    disabled={isAnyGenerationInProgress}
                   >
-                    {isWeeklyUpdateLoading
-                      ? "Generating weekly update..."
+                    {isAnyGenerationInProgress
+                      ? "Generating..."
                       : "Generate weekly update →"}
                   </button>
                   <span className="font-mono text-mono-caption text-text-muted mobile:hidden">
@@ -861,6 +867,12 @@ export default function ToolPage() {
                 {tab === "actions" && actionCount > 0
                   ? `${tabLabels[tab]} · ${actionCount}`
                   : tabLabels[tab]}
+                {tab === "actions" && optionalOutputCache.actionList.generationError && (
+                  <span className="ml-2 text-error">â€¢</span>
+                )}
+                {tab === "stakeholder" && hasStakeholderGenerationError && (
+                  <span className="ml-2 text-error">â€¢</span>
+                )}
               </button>
             ))}
           </div>
@@ -882,6 +894,14 @@ export default function ToolPage() {
                     <div className="whitespace-pre-wrap font-sans text-[16px] leading-[1.65] text-text-ink">
                       {displayedWeeklyUpdate}
                     </div>
+                    {hasOptionalOutputFailures && (
+                      <div className="mt-4 rounded border border-border-line bg-bg-paper px-4 py-3">
+                        <p className="font-sans text-[13px] text-text-ink-soft">
+                          Some additional outputs could not be generated. Open the affected tabs or
+                          press Generate to retry.
+                        </p>
+                      </div>
+                    )}
                     <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
                       <button
                         type="button"
@@ -943,19 +963,18 @@ export default function ToolPage() {
                       Generating Action List...
                     </p>
                   </div>
+                ) : optionalOutputCache.actionList.generationError ? (
+                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
+                    <p className="font-sans text-[16px] text-error">
+                      We couldn&apos;t generate the action list this time.
+                    </p>
+                  </div>
                 ) : !actionListOutput ? (
-                  <>
-                    {/* Spec gap: the redesign does not define a desktop control for generating
-                        optional outputs, so each optional tab exposes its existing handler
-                        through a local placeholder action to keep add-to-pack flows reachable. */}
-                    {renderOptionalPlaceholder(
-                      "Action List",
-                      "Your action list will appear here.",
-                      () => void handleGenerateActionList(),
-                      "Generate Action List →",
-                      isActionListLoading
-                    )}
-                  </>
+                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
+                    <p className="font-sans text-[16px] text-text-muted">
+                      Your action list will appear here.
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
@@ -1078,20 +1097,20 @@ export default function ToolPage() {
                       {stakeholderLoadingLabel}
                     </p>
                   </div>
+                ) : stakeholderCardState.generationError ? (
+                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
+                    <p className="font-sans text-[16px] text-error">
+                      {stakeholderAudience === "internal"
+                        ? "We couldn&apos;t generate the internal update this time."
+                        : "We couldn&apos;t generate the external update this time."}
+                    </p>
+                  </div>
                 ) : !stakeholderOutput ? (
-                  renderOptionalPlaceholder(
-                    stakeholderAudience === "internal" ? "Internal Update" : "External Update",
-                    stakeholderPlaceholderCopy,
-                    () =>
-                      void handleGenerateOptionalOutput(
-                        stakeholderOutputKey,
-                        stakeholderAudience === "internal"
-                          ? "the internal update"
-                          : "the external update"
-                      ),
-                    "Generate Stakeholder Update →",
-                    isStakeholderLoading
-                  )
+                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
+                    <p className="font-sans text-[16px] text-text-muted">
+                      {stakeholderPlaceholderCopy}
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
@@ -1188,37 +1207,6 @@ export default function ToolPage() {
             )}
           </div>
 
-          <section className="hidden border-t border-border-line px-4 py-5 mobile:block">
-            <p className="font-mono text-mono-caption uppercase tracking-[0.08em] text-text-muted">
-              Add to your pack
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="rounded border border-border-line bg-bg-surface p-3 text-left"
-                onClick={() => void handleOpenActionListTab()}
-                disabled={isActionListLoading || isWeeklyUpdateLoading}
-              >
-                <span className="block font-sans text-[14px] text-text-ink">Action list</span>
-                <span className="mt-1 block font-mono text-mono-caption text-text-accent">
-                  + ADD
-                </span>
-              </button>
-              <button
-                type="button"
-                className="rounded border border-border-line bg-bg-surface p-3 text-left"
-                onClick={() => void handleOpenStakeholderTab("internal")}
-                disabled={isInternalLoading || isWeeklyUpdateLoading}
-              >
-                <span className="block font-sans text-[14px] text-text-ink">
-                  Stakeholder update
-                </span>
-                <span className="mt-1 block font-mono text-mono-caption text-text-accent">
-                  + ADD
-                </span>
-              </button>
-            </div>
-          </section>
         </section>
       </div>
     </main>
