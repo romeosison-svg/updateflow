@@ -44,35 +44,14 @@ const sampleTranscripts = [
   }
 ] as const;
 
-const optionalOutputCards: Array<{
-  buttonLabel: string;
-  cardTitle: string;
-  errorLabel: string;
-  key: Extract<OutputCardKey, "actionList" | "externalUpdate" | "internalUpdate">;
-}> = [
-  {
-    key: "actionList",
-    buttonLabel: "Action List",
-    cardTitle: "Actions",
-    errorLabel: "the action list"
-  },
-  {
-    key: "internalUpdate",
-    buttonLabel: "Internal Update",
-    cardTitle: "Internal Update",
-    errorLabel: "the internal update"
-  },
-  {
-    key: "externalUpdate",
-    buttonLabel: "External Update",
-    cardTitle: "External Update",
-    errorLabel: "the external update"
-  }
-];
-
-type OptionalOutputKey = (typeof optionalOutputCards)[number]["key"];
 type OptionalFilterMode = "default" | "delivery";
-type ActiveTab = "weekly" | "actions" | "internal" | "external";
+type ActiveTab = "weekly" | "actions" | "stakeholder";
+type StakeholderAudience = "internal" | "external";
+type StakeholderOutputKey = Extract<OutputCardKey, "externalUpdate" | "internalUpdate">;
+type OptionalOutputKey = Extract<
+  OutputCardKey,
+  "actionList" | "externalUpdate" | "internalUpdate"
+>;
 type WeeklyLengthMode = "default" | "shorter" | "more_detail";
 
 type OptionalOutputCacheState = {
@@ -87,6 +66,12 @@ type OptionalOutputCacheState = {
 
 type OptionalOutputCache = Record<OptionalOutputKey, OptionalOutputCacheState>;
 
+const tabLabels: Record<ActiveTab, string> = {
+  weekly: "Weekly update",
+  actions: "Action list",
+  stakeholder: "Stakeholder"
+};
+
 type ParsedActionRow = {
   action: string;
   due: string;
@@ -94,6 +79,12 @@ type ParsedActionRow = {
   owner: string;
   priority: string;
 };
+
+function formatGenerationTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
 
 function createEmptyOptionalOutputCacheState(): OptionalOutputCacheState {
   return {
@@ -182,8 +173,21 @@ function getPriorityPillClasses(priority: string) {
   return "border border-border-line bg-transparent text-text-muted";
 }
 
+function getOptionalOutputValue(cardState: OptionalOutputCacheState) {
+  return cardState.activeMode === "delivery" && cardState.deliveryOutput
+    ? cardState.deliveryOutput
+    : cardState.defaultOutput;
+}
+
+function getStakeholderOutputKey(audience: StakeholderAudience): StakeholderOutputKey {
+  return audience === "internal" ? "internalUpdate" : "externalUpdate";
+}
+
 export default function ToolPage() {
   const posthog = usePostHog();
+  const [activeTab, setActiveTab] = useState<ActiveTab>("weekly");
+  const [stakeholderAudience, setStakeholderAudience] =
+    useState<StakeholderAudience>("internal");
   const [transcript, setTranscript] = useState("");
   const [defaultWeeklyUpdate, setDefaultWeeklyUpdate] = useState("");
   const [displayedWeeklyUpdate, setDisplayedWeeklyUpdate] = useState("");
@@ -192,6 +196,7 @@ export default function ToolPage() {
   const [isExternalLoading, setIsExternalLoading] = useState(false);
   const [isInternalLoading, setIsInternalLoading] = useState(false);
   const [isWeeklyUpdateLoading, setIsWeeklyUpdateLoading] = useState(false);
+  const [lastGenerationTime, setLastGenerationTime] = useState<number | null>(null);
   const [copyLabels, setCopyLabels] = useState<Partial<Record<OutputCardKey, string>>>({});
   // Spec note: the prompt layer remains delivery-biased in Default mode, so this cache
   // represents "raw model output under current prompts" vs "classifier-filtered output".
@@ -200,37 +205,35 @@ export default function ToolPage() {
   const [optionalOutputCache, setOptionalOutputCache] = useState<OptionalOutputCache>(
     createInitialOptionalOutputCache()
   );
-  const [activeTab, setActiveTab] = useState<ActiveTab>("weekly");
   // Spec gap: the existing weekly-update flow stores current text but not a canonical
   // "shorter vs more detail" mode, so this UI-only state tracks the last selected view.
   const [weeklyLengthMode, setWeeklyLengthMode] = useState<WeeklyLengthMode>("default");
 
-  const actionListOutput = optionalOutputCache.actionList.activeMode === "delivery" &&
-    optionalOutputCache.actionList.deliveryOutput
-    ? optionalOutputCache.actionList.deliveryOutput
-    : optionalOutputCache.actionList.defaultOutput;
-  const internalOutput = optionalOutputCache.internalUpdate.activeMode === "delivery" &&
-    optionalOutputCache.internalUpdate.deliveryOutput
-    ? optionalOutputCache.internalUpdate.deliveryOutput
-    : optionalOutputCache.internalUpdate.defaultOutput;
-  const externalOutput = optionalOutputCache.externalUpdate.activeMode === "delivery" &&
-    optionalOutputCache.externalUpdate.deliveryOutput
-    ? optionalOutputCache.externalUpdate.deliveryOutput
-    : optionalOutputCache.externalUpdate.defaultOutput;
-
+  const actionListOutput = getOptionalOutputValue(optionalOutputCache.actionList);
   const parsedActionRows = useMemo(() => parseActionListOutput(actionListOutput), [actionListOutput]);
   const actionCount = parsedActionRows?.length ?? 0;
 
-  const activeTabOutput =
-    activeTab === "weekly"
-      ? displayedWeeklyUpdate
-      : activeTab === "actions"
-        ? actionListOutput
-        : activeTab === "internal"
-          ? internalOutput
-          : externalOutput;
+  const stakeholderOutputKey = getStakeholderOutputKey(stakeholderAudience);
+  const stakeholderCardState = optionalOutputCache[stakeholderOutputKey];
+  const stakeholderOutput = getOptionalOutputValue(stakeholderCardState);
+  const stakeholderCopyState = copyLabels[stakeholderOutputKey] ?? "Copy";
+  const stakeholderLoadingLabel =
+    stakeholderAudience === "internal"
+      ? "Generating Internal Update..."
+      : "Generating External Update...";
+  const stakeholderPlaceholderCopy =
+    stakeholderAudience === "internal"
+      ? "Your internal team update will appear here."
+      : "Your stakeholder-facing update will appear here.";
+  const isStakeholderLoading =
+    stakeholderAudience === "internal" ? isInternalLoading : isExternalLoading;
 
-  const showGeneratedIndicator = Boolean(activeTabOutput);
+  const showGeneratedIndicator =
+    activeTab === "weekly"
+      ? Boolean(displayedWeeklyUpdate)
+      : activeTab === "actions"
+        ? Boolean(actionListOutput)
+        : Boolean(stakeholderOutput);
 
   const resetSupplementaryOutputs = () => {
     setOptionalOutputCache(createInitialOptionalOutputCache());
@@ -265,6 +268,7 @@ export default function ToolPage() {
 
     setError("");
     setIsWeeklyUpdateLoading(true);
+    const startTime = Date.now();
 
     if (options?.isResetToDefault) {
       setDisplayedWeeklyUpdate("");
@@ -306,6 +310,15 @@ export default function ToolPage() {
         setDisplayedWeeklyUpdate(nextWeeklyUpdate);
       }
 
+      // Spec note: generateWeeklyUpdate is reused by adjustment/reset flows, but the
+      // timer should only reflect successful full generations from the transcript.
+      if (!options?.adjustmentDirection && !options?.isResetToDefault) {
+        const elapsedSeconds = Math.round(
+          (Date.now() - startTime) / 1000
+        );
+        setLastGenerationTime(elapsedSeconds);
+      }
+
       setCopyLabels((current) => ({
         ...(options?.resetSupplementaryOutputs ? {} : current),
         shortStatus: "Copy"
@@ -335,6 +348,7 @@ export default function ToolPage() {
     event.preventDefault();
     setActiveTab("weekly");
     setWeeklyLengthMode("default");
+    setLastGenerationTime(null);
 
     await generateWeeklyUpdate({
       captureGenerateEvent: true,
@@ -443,7 +457,7 @@ export default function ToolPage() {
   ) => {
     if (!transcript.trim()) {
       setError(`Paste some meeting notes or a transcript before generating ${errorLabel}.`);
-      return;
+      return false;
     }
 
     setError("");
@@ -504,12 +518,14 @@ export default function ToolPage() {
       }));
 
       void prefetchDeliveryOnlyOutput(key, requestBody);
+      return true;
     } catch (optionalError) {
       setError(
         optionalError instanceof Error
           ? optionalError.message
           : `Something went wrong while generating ${errorLabel}.`
       );
+      return false;
     } finally {
       switch (key) {
         case "actionList":
@@ -526,24 +542,25 @@ export default function ToolPage() {
   };
 
   const handleGenerateActionList = async () => {
-    setActiveTab("actions");
-
-    await handleGenerateFilterableOutput("actionList", "the action list", {
+    return handleGenerateFilterableOutput("actionList", "the action list", {
       transcript,
       outputType: "action-list"
     });
   };
 
   const handleGenerateOptionalOutput = async (
-    key: Extract<OutputCardKey, "externalUpdate" | "internalUpdate">,
+    key: StakeholderOutputKey,
     errorLabel: string
   ) => {
-    setActiveTab(key === "internalUpdate" ? "internal" : "external");
-
-    await handleGenerateFilterableOutput(key, errorLabel, {
+    const didGenerate = await handleGenerateFilterableOutput(key, errorLabel, {
       transcript,
       ...(key === "internalUpdate" ? { includeInternal: true } : { includeExternal: true })
     });
+
+    if (didGenerate) {
+      setActiveTab("stakeholder");
+      setStakeholderAudience(key === "internalUpdate" ? "internal" : "external");
+    }
   };
 
   const handleSetOptionalOutputMode = (key: OptionalOutputKey, mode: OptionalFilterMode) => {
@@ -620,6 +637,35 @@ export default function ToolPage() {
     setError("");
   };
 
+  const handleOpenActionListTab = () => {
+    setActiveTab("actions");
+    void handleGenerateActionList();
+  };
+
+  const handleOpenStakeholderTab = (audience: StakeholderAudience = "internal") => {
+    setActiveTab("stakeholder");
+    setStakeholderAudience(audience);
+    void handleGenerateOptionalOutput(
+      getStakeholderOutputKey(audience),
+      audience === "internal" ? "the internal update" : "the external update"
+    );
+  };
+
+  const handleStakeholderAudienceChange = (audience: StakeholderAudience) => {
+    const nextKey = getStakeholderOutputKey(audience);
+    const nextCardState = optionalOutputCache[nextKey];
+    const isNextAudienceLoading = audience === "internal" ? isInternalLoading : isExternalLoading;
+
+    setStakeholderAudience(audience);
+
+    if (!nextCardState.defaultOutput && !isNextAudienceLoading) {
+      void handleGenerateOptionalOutput(
+        nextKey,
+        audience === "internal" ? "the internal update" : "the external update"
+      );
+    }
+  };
+
   const handleCopy = async (key: OutputCardKey, value: string) => {
     if (!value) {
       return;
@@ -691,8 +737,10 @@ export default function ToolPage() {
       <header className="border-b border-border-line bg-bg-surface px-7 py-4 mobile:px-4 mobile:py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center text-[14px] mobile:text-[15px]">
-            <span className="font-sans font-bold text-text-ink">Updateflow</span>
-            <span className="text-text-muted">.ai</span>
+            <Link href="/" className="flex items-center">
+              <span className="font-sans font-bold text-text-ink">Updateflow</span>
+              <span className="text-text-muted">.ai</span>
+            </Link>
             <span className="ml-3 rounded-full border border-border-line px-2 py-[3px] font-mono text-mono-caption text-text-muted">
               w/c 28 apr
             </span>
@@ -709,8 +757,8 @@ export default function ToolPage() {
         </div>
       </header>
 
-      <div className="grid min-h-[920px] grid-cols-[1fr_1.1fr] border-t border-border-line mobile:flex mobile:flex-col">
-        <section className="border-r border-border-line bg-bg-paper mobile:border-r-0">
+      <div className="grid h-[calc(100vh-57px)] grid-cols-[1fr_1.1fr] border-t border-border-line mobile:h-auto mobile:flex mobile:flex-col">
+        <section className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border-line bg-bg-paper mobile:border-r-0">
           <div className="flex items-center justify-between px-7 pb-4 pt-5 mobile:px-4">
             <span className="font-mono text-mono-caption uppercase tracking-[0.1em] text-text-muted">
               ① Paste notes
@@ -720,116 +768,101 @@ export default function ToolPage() {
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-2 px-7 pb-4 mobile:px-4">
-            {sampleTranscripts.map((sample) => {
-              const isActive = transcript === sample.transcript;
+          <div className="px-7 pb-4 mobile:px-4">
+            <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
+              Try an example
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {sampleTranscripts.map((sample) => {
+                const isActive = transcript === sample.transcript;
 
-              return (
-                <button
-                  key={sample.id}
-                  type="button"
-                  className={`rounded-full px-[10px] py-[5px] font-mono text-mono-caption ${
-                    isActive
-                      ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                      : "border border-border-line bg-bg-surface text-text-ink-soft"
-                  }`}
-                  onClick={() => handleSampleClick(sample.transcript)}
-                >
-                  {sample.label}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={sample.id}
+                    type="button"
+                    className={`rounded-full px-[10px] py-[5px] font-mono text-mono-caption ${
+                      isActive
+                        ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                        : "border border-border-line bg-bg-surface text-text-ink-soft"
+                    }`}
+                    onClick={() => handleSampleClick(sample.transcript)}
+                  >
+                    {sample.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="flex h-full flex-col px-7 pb-7 mobile:px-4 mobile:pb-5">
-            <form className="flex h-full flex-col" onSubmit={handleSubmit}>
-              <textarea
-                className="min-h-[240px] flex-1 resize-none whitespace-pre-wrap rounded border border-border-line bg-bg-surface p-[18px] font-mono text-mono-input leading-[1.65] text-text-ink-soft mobile:max-h-[180px] mobile:text-mono-caption"
-                value={transcript}
-                onChange={(event) => setTranscript(event.target.value)}
-                placeholder="Paste your notes from this week: rough bullets, Copilot or Zoom summaries, Teams notes, or anything from the meeting."
-              />
-              <div className="mt-4 flex items-center gap-3 mobile:flex-col mobile:items-stretch">
-                <button
-                  className="rounded bg-bg-accent px-4 py-[10px] font-sans text-[14px] font-medium text-text-accent-ink disabled:cursor-not-allowed disabled:opacity-60 mobile:w-full"
-                  type="submit"
-                  disabled={isWeeklyUpdateLoading}
-                >
-                  {isWeeklyUpdateLoading
-                    ? "Generating weekly update..."
-                    : "Generate weekly update →"}
-                </button>
-                <span className="font-mono text-mono-caption text-text-muted mobile:hidden">
-                  ⌘↵ to run
-                </span>
-                <span className="ml-auto font-sans text-[12px] text-text-muted mobile:hidden">
-                  Names anonymised on output
-                </span>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <form className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={handleSubmit}>
+              <div className="flex min-h-0 flex-1 flex-col px-7 mobile:px-4">
+                {/* TODO: The original spec was written for a different branch shape; this keeps the
+                    current split-editor layout and only changes the scrolling boundary. */}
+                <textarea
+                  className="min-h-[240px] flex-1 resize-none overflow-y-auto whitespace-pre-wrap rounded border border-border-line bg-bg-surface p-[18px] font-mono text-mono-input leading-[1.65] text-text-ink-soft mobile:max-h-[180px] mobile:text-mono-caption"
+                  value={transcript}
+                  onChange={(event) => setTranscript(event.target.value)}
+                  placeholder="Paste your notes from this week: rough bullets, Copilot or Zoom summaries, Teams notes, or anything from the meeting."
+                />
+                {error && (
+                  <p className="mt-2 font-sans text-[13px] text-error">{error}</p>
+                )}
               </div>
-              {error && (
-                <p className="mt-2 font-sans text-[13px] text-error">{error}</p>
-              )}
+              <div className="border-t border-border-line px-7 py-4 mobile:px-4">
+                <div className="flex items-center gap-3 mobile:flex-col mobile:items-stretch">
+                  <button
+                    className="rounded bg-bg-accent px-4 py-[10px] font-sans text-[14px] font-medium text-text-accent-ink disabled:cursor-not-allowed disabled:opacity-60 mobile:w-full"
+                    type="submit"
+                    disabled={isWeeklyUpdateLoading}
+                  >
+                    {isWeeklyUpdateLoading
+                      ? "Generating weekly update..."
+                      : "Generate weekly update →"}
+                  </button>
+                  <span className="font-mono text-mono-caption text-text-muted mobile:hidden">
+                    ⌘↵ to run
+                  </span>
+                  <span className="ml-auto font-sans text-[12px] text-text-muted mobile:hidden">
+                    Names anonymised on output
+                  </span>
+                </div>
+              </div>
             </form>
           </div>
         </section>
 
-        <section className="bg-bg-surface">
+        <section className="h-full overflow-y-auto bg-bg-surface">
           <div className="flex items-center justify-between px-7 pb-0 pt-5 mobile:px-4">
             <span className="font-mono text-mono-caption uppercase tracking-[0.1em] text-text-muted">
               ② This week&apos;s documents
             </span>
-            {showGeneratedIndicator && (
+            {showGeneratedIndicator &&
+              !isWeeklyUpdateLoading &&
+              lastGenerationTime !== null && (
               <span className="font-mono text-mono-caption text-text-accent">
-                ● generated 0:21
+                ● generated {formatGenerationTime(lastGenerationTime)}
               </span>
             )}
           </div>
 
           <div className="mt-4 flex gap-1 overflow-x-auto border-b border-border-line px-7 mobile:px-4 mobile:whitespace-nowrap [&::-webkit-scrollbar]:hidden">
-            <button
-              type="button"
-              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
-                activeTab === "weekly"
-                  ? "border-b-bg-accent text-text-ink"
-                  : "border-b-transparent text-text-muted"
-              } mobile:text-[13px]`}
-              onClick={() => setActiveTab("weekly")}
-            >
-              Weekly update
-            </button>
-            <button
-              type="button"
-              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
-                activeTab === "actions"
-                  ? "border-b-bg-accent text-text-ink"
-                  : "border-b-transparent text-text-muted"
-              } mobile:text-[13px]`}
-              onClick={() => setActiveTab("actions")}
-            >
-              Action list{actionCount > 0 ? ` · ${actionCount}` : ""}
-            </button>
-            <button
-              type="button"
-              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
-                activeTab === "internal"
-                  ? "border-b-bg-accent text-text-ink"
-                  : "border-b-transparent text-text-muted"
-              } mobile:text-[13px]`}
-              onClick={() => setActiveTab("internal")}
-            >
-              Internal
-            </button>
-            <button
-              type="button"
-              className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
-                activeTab === "external"
-                  ? "border-b-bg-accent text-text-ink"
-                  : "border-b-transparent text-text-muted"
-              } mobile:text-[13px]`}
-              onClick={() => setActiveTab("external")}
-            >
-              External
-            </button>
+            {(["weekly", "actions", "stakeholder"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`border-b-2 px-[14px] py-3 font-sans text-[14px] ${
+                  activeTab === tab
+                    ? "border-b-bg-accent text-text-ink"
+                    : "border-b-transparent text-text-muted"
+                } mobile:text-[13px]`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab === "actions" && actionCount > 0
+                  ? `${tabLabels[tab]} · ${actionCount}`
+                  : tabLabels[tab]}
+              </button>
+            ))}
           </div>
 
           <div className="p-7 mobile:p-5">
@@ -933,33 +966,43 @@ export default function ToolPage() {
                         {parsedActionRows.map((row) => (
                           <div
                             key={`${row.number}-${row.action}`}
-                            className="grid grid-cols-[20px_80px_1fr_90px_70px] items-center gap-[14px] border-b border-border-line-soft py-3 mobile:block"
+                            className="grid grid-cols-[20px_1fr_auto] items-start gap-3 border-b border-border-line-soft py-[10px] mobile:block"
                           >
                             <div className="font-mono text-[12px] text-text-muted mobile:hidden">
                               {row.number}
                             </div>
-                            <div className="font-sans text-[14px] font-semibold text-text-ink mobile:mb-1 mobile:flex mobile:items-center mobile:justify-between">
-                              <span>{row.owner}</span>
-                              <span className="hidden mobile:flex mobile:items-center mobile:gap-2">
-                                <span className="font-mono text-[12px] font-normal text-text-muted">
-                                  {row.due}
+                            <div>
+                              <div className="hidden items-center justify-between mobile:mb-1 mobile:flex">
+                                <span className="font-sans text-[14px] font-semibold text-text-ink">
+                                  {row.owner}
                                 </span>
-                                <span
-                                  className={`rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
-                                >
-                                  {row.priority}
+                                <span className="flex items-center gap-2">
+                                  <span className="font-mono text-[12px] font-normal text-text-muted">
+                                    {row.due}
+                                  </span>
+                                  <span
+                                    className={`rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
+                                  >
+                                    {row.priority}
+                                  </span>
                                 </span>
+                              </div>
+                              <p className="font-sans text-[14px] text-text-ink-soft mobile:pl-6 mobile:text-[13px]">
+                                <span className="font-semibold text-text-ink mobile:hidden">
+                                  {row.owner}
+                                </span>
+                                <span className="mobile:hidden">{" · "}</span>
+                                {row.action}
+                              </p>
+                            </div>
+                            <div className="text-right mobile:hidden">
+                              <span className="block font-mono text-[11px] text-text-muted">
+                                {row.due}
                               </span>
-                            </div>
-                            <div className="font-sans text-[14px] text-text-ink-soft mobile:pl-6 mobile:text-[13px]">
-                              {row.action}
-                            </div>
-                            <div className="font-mono text-[12px] text-text-muted mobile:hidden">
-                              {row.due}
-                            </div>
-                            <div className="mobile:hidden">
+                              {/* TODO: The landing-page reference does not define a desktop priority treatment.
+                                  Preserve the existing app priority pill until product specifies otherwise. */}
                               <span
-                                className={`rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
+                                className={`mt-1 inline-flex rounded-full px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${getPriorityPillClasses(row.priority)}`}
                               >
                                 {row.priority}
                               </span>
@@ -1027,160 +1070,119 @@ export default function ToolPage() {
               </>
             )}
 
-            {activeTab === "internal" && (
+            {activeTab === "stakeholder" && (
               <>
-                {isInternalLoading ? (
+                {isStakeholderLoading ? (
                   <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
-                    <p className="font-sans text-[16px] text-text-muted">
-                      Generating Internal Update...
+                    <p className="font-sans text-[16px] text-text-muted animate-pulse-opacity">
+                      {stakeholderLoadingLabel}
                     </p>
                   </div>
-                ) : !internalOutput ? (
+                ) : !stakeholderOutput ? (
                   renderOptionalPlaceholder(
-                    "Internal Update",
-                    "Your internal update will appear here.",
-                    () => void handleGenerateOptionalOutput("internalUpdate", "the internal update"),
-                    "Generate Internal Update →",
-                    isInternalLoading
+                    stakeholderAudience === "internal" ? "Internal Update" : "External Update",
+                    stakeholderPlaceholderCopy,
+                    () =>
+                      void handleGenerateOptionalOutput(
+                        stakeholderOutputKey,
+                        stakeholderAudience === "internal"
+                          ? "the internal update"
+                          : "the external update"
+                      ),
+                    "Generate Stakeholder Update →",
+                    isStakeholderLoading
                   )
                 ) : (
                   <>
                     <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
-                      Internal update
+                      Stakeholder update
                     </p>
                     <div className="whitespace-pre-wrap font-sans text-[16px] leading-[1.65] text-text-ink">
-                      {internalOutput}
-                    </div>
-                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
-                      <button
-                        type="button"
-                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
-                          optionalOutputCache.internalUpdate.activeMode === "default"
-                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                            : "border border-border-line bg-bg-surface text-text-ink-soft"
-                        }`}
-                        aria-pressed={optionalOutputCache.internalUpdate.activeMode === "default"}
-                        onClick={() => handleSetOptionalOutputMode("internalUpdate", "default")}
-                      >
-                        Default
-                      </button>
-                      <button
-                        type="button"
-                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
-                          optionalOutputCache.internalUpdate.activeMode === "delivery"
-                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                            : "border border-border-line bg-bg-surface text-text-ink-soft"
-                        }`}
-                        aria-pressed={optionalOutputCache.internalUpdate.activeMode === "delivery"}
-                        onClick={() => handleSetOptionalOutputMode("internalUpdate", "delivery")}
-                        disabled={
-                          optionalOutputCache.internalUpdate.deliveryOutputLoading &&
-                          optionalOutputCache.internalUpdate.pendingMode === "delivery"
-                        }
-                      >
-                        Delivery only
-                      </button>
-                      {optionalOutputCache.internalUpdate.deliveryOutputLoading &&
-                        optionalOutputCache.internalUpdate.pendingMode === "delivery" && (
-                          <span className="font-sans text-[12px] text-text-muted">
-                            Preparing Delivery only...
-                          </span>
-                        )}
-                      {optionalOutputCache.internalUpdate.showDeliveryError && (
-                        <span className="font-sans text-[12px] text-error">
-                          Delivery only is unavailable right now.
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
-                        onClick={() => void handleCopy("internalUpdate", internalOutput)}
-                      >
-                        {copyLabels.internalUpdate === "Copied"
-                          ? "Copied ✓"
-                          : (copyLabels.internalUpdate ?? "Copy")}
-                      </button>
+                      {stakeholderOutput}
                     </div>
                   </>
                 )}
-              </>
-            )}
-
-            {activeTab === "external" && (
-              <>
-                {isExternalLoading ? (
-                  <div className="flex min-h-[320px] items-center justify-center mobile:min-h-[220px]">
-                    <p className="font-sans text-[16px] text-text-muted">
-                      Generating External Update...
-                    </p>
-                  </div>
-                ) : !externalOutput ? (
-                  renderOptionalPlaceholder(
-                    "External Update",
-                    "Your external update will appear here.",
-                    () => void handleGenerateOptionalOutput("externalUpdate", "the external update"),
-                    "Generate External Update →",
-                    isExternalLoading
-                  )
-                ) : (
-                  <>
-                    <p className="mb-5 font-mono text-mono-caption uppercase tracking-[0.06em] text-text-muted">
-                      External update
-                    </p>
-                    <div className="whitespace-pre-wrap font-sans text-[16px] leading-[1.65] text-text-ink">
-                      {externalOutput}
-                    </div>
-                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
-                      <button
-                        type="button"
-                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
-                          optionalOutputCache.externalUpdate.activeMode === "default"
-                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                            : "border border-border-line bg-bg-surface text-text-ink-soft"
-                        }`}
-                        aria-pressed={optionalOutputCache.externalUpdate.activeMode === "default"}
-                        onClick={() => handleSetOptionalOutputMode("externalUpdate", "default")}
-                      >
-                        Default
-                      </button>
-                      <button
-                        type="button"
-                        className={`rounded px-3 py-[6px] font-sans text-[12px] ${
-                          optionalOutputCache.externalUpdate.activeMode === "delivery"
-                            ? "border border-text-accent bg-bg-accent-soft text-text-accent"
-                            : "border border-border-line bg-bg-surface text-text-ink-soft"
-                        }`}
-                        aria-pressed={optionalOutputCache.externalUpdate.activeMode === "delivery"}
-                        onClick={() => handleSetOptionalOutputMode("externalUpdate", "delivery")}
-                        disabled={
-                          optionalOutputCache.externalUpdate.deliveryOutputLoading &&
-                          optionalOutputCache.externalUpdate.pendingMode === "delivery"
-                        }
-                      >
-                        Delivery only
-                      </button>
-                      {optionalOutputCache.externalUpdate.deliveryOutputLoading &&
-                        optionalOutputCache.externalUpdate.pendingMode === "delivery" && (
-                          <span className="font-sans text-[12px] text-text-muted">
-                            Preparing Delivery only...
-                          </span>
-                        )}
-                      {optionalOutputCache.externalUpdate.showDeliveryError && (
-                        <span className="font-sans text-[12px] text-error">
-                          Delivery only is unavailable right now.
+                {(stakeholderOutput || isStakeholderLoading) && (
+                  <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-dashed border-border-line pt-4">
+                    <button
+                      type="button"
+                      className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                        stakeholderAudience === "internal"
+                          ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                          : "border border-border-line bg-bg-surface text-text-ink-soft"
+                      }`}
+                      aria-pressed={stakeholderAudience === "internal"}
+                      onClick={() => handleStakeholderAudienceChange("internal")}
+                      disabled={isStakeholderLoading}
+                    >
+                      Internal
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                        stakeholderAudience === "external"
+                          ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                          : "border border-border-line bg-bg-surface text-text-ink-soft"
+                      }`}
+                      aria-pressed={stakeholderAudience === "external"}
+                      onClick={() => handleStakeholderAudienceChange("external")}
+                      disabled={isStakeholderLoading}
+                    >
+                      External
+                    </button>
+                    <span
+                      aria-hidden="true"
+                      className="h-5 w-px bg-border mx-1"
+                    />
+                    <button
+                      type="button"
+                      className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                        stakeholderCardState.activeMode === "default"
+                          ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                          : "border border-border-line bg-bg-surface text-text-ink-soft"
+                      }`}
+                      aria-pressed={stakeholderCardState.activeMode === "default"}
+                      onClick={() => handleSetOptionalOutputMode(stakeholderOutputKey, "default")}
+                    >
+                      Default
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded px-3 py-[6px] font-sans text-[12px] ${
+                        stakeholderCardState.activeMode === "delivery"
+                          ? "border border-text-accent bg-bg-accent-soft text-text-accent"
+                          : "border border-border-line bg-bg-surface text-text-ink-soft"
+                      }`}
+                      aria-pressed={stakeholderCardState.activeMode === "delivery"}
+                      onClick={() => handleSetOptionalOutputMode(stakeholderOutputKey, "delivery")}
+                      disabled={
+                        stakeholderCardState.deliveryOutputLoading &&
+                        stakeholderCardState.pendingMode === "delivery"
+                      }
+                    >
+                      Delivery only
+                    </button>
+                    {stakeholderCardState.deliveryOutputLoading &&
+                      stakeholderCardState.pendingMode === "delivery" && (
+                        <span className="font-sans text-[12px] text-text-muted">
+                          Preparing Delivery only...
                         </span>
                       )}
-                      <button
-                        type="button"
-                        className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
-                        onClick={() => void handleCopy("externalUpdate", externalOutput)}
-                      >
-                        {copyLabels.externalUpdate === "Copied"
-                          ? "Copied ✓"
-                          : (copyLabels.externalUpdate ?? "Copy")}
-                      </button>
-                    </div>
-                  </>
+                    {stakeholderCardState.showDeliveryError && (
+                      <span className="font-sans text-[12px] text-error">
+                        Delivery only is unavailable right now.
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="ml-auto rounded bg-bg-accent px-[14px] py-[8px] font-sans text-[13px] text-text-accent-ink mobile:ml-0 mobile:mt-2 mobile:w-full"
+                      onClick={() => void handleCopy(stakeholderOutputKey, stakeholderOutput)}
+                    >
+                      {stakeholderCopyState === "Copied"
+                        ? "Copied ✓"
+                        : stakeholderCopyState}
+                    </button>
+                  </div>
                 )}
               </>
             )}
@@ -1194,7 +1196,7 @@ export default function ToolPage() {
               <button
                 type="button"
                 className="rounded border border-border-line bg-bg-surface p-3 text-left"
-                onClick={() => void handleGenerateActionList()}
+                onClick={() => void handleOpenActionListTab()}
                 disabled={isActionListLoading || isWeeklyUpdateLoading}
               >
                 <span className="block font-sans text-[14px] text-text-ink">Action list</span>
@@ -1205,24 +1207,11 @@ export default function ToolPage() {
               <button
                 type="button"
                 className="rounded border border-border-line bg-bg-surface p-3 text-left"
-                onClick={() => void handleGenerateOptionalOutput("internalUpdate", "the internal update")}
+                onClick={() => void handleOpenStakeholderTab("internal")}
                 disabled={isInternalLoading || isWeeklyUpdateLoading}
               >
                 <span className="block font-sans text-[14px] text-text-ink">
-                  Internal update
-                </span>
-                <span className="mt-1 block font-mono text-mono-caption text-text-accent">
-                  + ADD
-                </span>
-              </button>
-              <button
-                type="button"
-                className="rounded border border-border-line bg-bg-surface p-3 text-left"
-                onClick={() => void handleGenerateOptionalOutput("externalUpdate", "the external update")}
-                disabled={isExternalLoading || isWeeklyUpdateLoading}
-              >
-                <span className="block font-sans text-[14px] text-text-ink">
-                  External update
+                  Stakeholder update
                 </span>
                 <span className="mt-1 block font-mono text-mono-caption text-text-accent">
                   + ADD
